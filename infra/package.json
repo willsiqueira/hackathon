@@ -11,7 +11,8 @@
     "destroy": "npx aws-cdk@2 destroy --profile hackathon",
     "test": "vitest --run",
     "typecheck": "tsc --noEmit",
-    "usuarios": "tsx scripts/criar-usuarios.ts"
+    "usuarios": "tsx scripts/criar-usuarios.ts",
+    "test:coverage": "vitest --run --coverage"
   },
   "dependencies": {
     "aws-cdk-lib": "2.272.0",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "3.1147.0",
     "@types/node": "22.19.1",
+    "@vitest/coverage-v8": "5.0.3",
     "esbuild": "0.28.2",
     "tsx": "4.23.15",
     "typescript": "6.0.3",

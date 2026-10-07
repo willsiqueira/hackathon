@@ -10,7 +10,8 @@
   "scripts": {
     "start": "tsx src/local/servidor.ts",
     "test": "vitest --run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:coverage": "vitest --run --coverage"
   },
   "dependencies": {
     "zod": "4.6.5"
@@ -22,6 +23,7 @@
     "@aws-sdk/lib-dynamodb": "3.1147.0",
     "@types/aws-lambda": "8.10.164",
     "@types/node": "22.19.1",
+    "@vitest/coverage-v8": "5.0.3",
     "esbuild": "0.28.2",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
