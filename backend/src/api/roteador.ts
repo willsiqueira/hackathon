@@ -2,6 +2,7 @@
 // Toda rota exige identidade; setor e perfil vêm do cadastro do usuário.
 
 import * as expedientes from './handlers/expedientes.js';
+import * as ia from './handlers/ia.js';
 import * as inicio from './handlers/inicio.js';
 import * as lotes from './handlers/lotes.js';
 import * as usuario from './handlers/usuario.js';
@@ -12,6 +13,7 @@ import { ErroNaoEncontrado, ErroProibido } from '../dominio/erros.js';
 import type { ComStatus, Contexto, Handler } from './contexto.js';
 import type { Repositorio } from '../dados/repositorio.js';
 import type { PublicadorEventos } from '../eventos/eventos.js';
+import { CacheCurto, ModeloDemonstracao, type Ia } from '../servicos/ia.js';
 
 type Metodo = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -42,6 +44,8 @@ const DEFINICOES: [Metodo, string, Handler][] = [
   ['GET', '/api/notificacoes', usuario.listarNotificacoes],
   ['POST', '/api/notificacoes/lidas', usuario.marcarLidas],
   ['GET', '/api/indicadores', indicadores],
+  ['POST', '/api/ia/busca', ia.busca],
+  ['POST', '/api/ia/resumo-dia', ia.resumoDia],
 ];
 
 const ROTAS = DEFINICOES.map(([metodo, padrao, handler]) => {
@@ -83,9 +87,14 @@ export interface Dependencias {
   relogio: () => Date;
   eventos: PublicadorEventos;
   registrar?: (erro: unknown) => void;
+  /** Padrão: modo demonstração (sem rede), para testes e servidor local sem credenciais. */
+  ia?: Ia;
 }
 
-export function criarApi({ repo, relogio, eventos, registrar = registrarErro }: Dependencias) {
+export function criarApi({
+  repo, relogio, eventos, registrar = registrarErro,
+  ia: modeloIa = { modelo: new ModeloDemonstracao(), origem: 'demonstracao', cache: new CacheCurto() },
+}: Dependencias) {
   return async function tratar(req: Requisicao): Promise<Resposta> {
     try {
       // Identidade antes de qualquer resposta (inclusive 404), para não revelar rotas a anônimos.
@@ -97,7 +106,7 @@ export function criarApi({ repo, relogio, eventos, registrar = registrarErro }: 
       const setor = await repo.obterSetor(usuarioAutenticado.siglaSetor);
       if (!setor) throw new ErroProibido('Setor do usuário não cadastrado.');
       const ctx: Contexto = {
-        repo, eventos, agora: relogio(), usuario: usuarioAutenticado, setor,
+        repo, eventos, ia: modeloIa, agora: relogio(), usuario: usuarioAutenticado, setor,
         params: encontrada.params, query: req.query ?? {}, corpo: req.corpo?.(),
       };
       const resultado = await encontrada.rota.handler(ctx);

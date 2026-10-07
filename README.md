@@ -44,7 +44,11 @@ flowchart LR
   SCH[EventBridge Scheduler<br/>dias úteis, 7h] --> RES[Lambda Resumo diário]
   RES --> DDB
   RES --> SES[Amazon SES]
+  API -->|Converse, só dados minimizados| BR[Amazon Bedrock<br/>Nova Lite, perfil us.]
 ```
+
+O PNG acima ainda não mostra o Amazon Bedrock: o script já tem o nó, mas a imagem só muda quando for regenerada com
+Graphviz. A versão em texto está atualizada.
 
 - **Serverless de ponta a ponta**, tudo em **AWS CDK v2** ([`infra/`](infra/)): nada criado no console.
 - **Tabela única** exatamente como no `itens.json` do kit: painel pelo GSI1 (`SETOR#…` / `ATIVO#…`), fila pelo GSI2
@@ -71,6 +75,11 @@ flowchart LR
 | RF15, RF16 central de alertas e resumo diário por e-mail (prévia na tela) | Alertas |
 | RF17 indicadores com tabela alternativa; produtividade só para membro e chefe | Indicadores |
 | RF18, RF19 tela inicial com contadores clicáveis, próximos prazos, alertas, informes; widgets configuráveis | Início |
+| Busca com IA: frase em linguagem natural ("réu preso que vence esta semana") vira filtros revisáveis, aplicados ao formulário de filtros avançados | Expedientes ("Buscar com IA") |
+| Resumo do dia com IA, gerado ao clicar, identificado como IA, sem conteúdo de sigilosos | Início (widget "Resumo do dia (IA)") |
+
+Os dois recursos de IA usam o Amazon Bedrock (Amazon Nova Lite) pela Lambda da API, sempre no escopo do setor do
+usuário. Se o Bedrock falhar, a tela avisa (503) e a pesquisa e os filtros manuais continuam funcionando.
 
 ## Rodar localmente
 
@@ -85,6 +94,21 @@ cd frontend && npm ci && npm start         # SPA em http://localhost:4200 (proxy
 
 Ou publique o build pelo próprio servidor local: `cd frontend && npm run build`, depois `cd backend && npm start` e abra
 <http://127.0.0.1:3000>. No modo local, o login é um seletor de usuário fictício (sem senha) com token HMAC assinado.
+
+A IA roda localmente em modo demonstração (respostas determinísticas, sem rede nem credenciais) a menos que você
+aponte um modelo do Bedrock. O servidor mostra o modo no início ("IA: modo demonstração…" ou "IA: Bedrock (<id>)").
+
+```bash
+cd backend && IA_MODO=fake npm start                                                    # força o modo demonstração
+cd backend && BEDROCK_MODEL_ID=us.amazon.nova-lite-v1:0 AWS_PROFILE=hackathon npm start  # Bedrock de verdade
+```
+
+| Variável (backend) | Padrão | Efeito |
+| --- | --- | --- |
+| `BEDROCK_MODEL_ID` | vazio (modo demonstração); na Lambda, `us.amazon.nova-lite-v1:0` | Modelo ou inference profile chamado pelo Converse |
+| `BEDROCK_REGIAO` | `AWS_REGION` ou `us-east-1` | Região do cliente do Bedrock |
+| `IA_TIMEOUT_MS` | `10000` | Tempo máximo por chamada ao modelo (a Lambda Api tem 15 s) |
+| `IA_MODO` | — | `fake` força o modo demonstração mesmo com `BEDROCK_MODEL_ID` |
 
 ### Roteiro da demonstração (5 min)
 
@@ -108,12 +132,20 @@ Ou publique o build pelo próprio servidor local: `cd frontend && npm run build`
 
 ```bash
 cd backend && npm test        # Vitest: regras RN1–RN7, lote, sigilo, eventos e API sobre a base completa
-cd infra && npm test          # template: nenhum método anônimo, IAM sem "*", KMS, HTTPS, eventos
-cd frontend && npm test       # selos, contraste, filtros, ações por perfil, interceptor
+cd infra && npm test          # template: nenhum método anônimo, IAM sem "*", KMS, HTTPS, eventos, IAM do Bedrock
+cd frontend && npm test       # selos, contraste, filtros, IA, ações por perfil, interceptor
 ```
 
-Os testes de API cobrem 401, 403 de outro setor e de claims divergentes, máscara de sigilo em lista, detalhe, CSV,
-histórico e `.ics`, contadores iguais aos de `contadores.csv` e lote de ponta a ponta com desfazer. O roteiro acima foi
+Hoje são 106 testes no backend, 12 na infra e 46 no frontend. Os testes de API cobrem 401, 403 de outro setor e de
+claims divergentes, máscara de sigilo em lista, detalhe, CSV, histórico e `.ics`, contadores iguais aos de
+`contadores.csv` e lote de ponta a ponta com desfazer.
+
+`backend/test/ia.test.ts` (24 testes) usa um modelo espião, sem rede: valida entrada (400), resposta ilegível (422),
+Bedrock indisponível (503 sem prompt no log), cache do resumo e critérios aceitos pelo painel (inclusive a caixa da IA
+virando a aba de caixa, sem cruzar com a aba atual). Os testes de sigilo
+capturam o texto exato enviado ao modelo e provam, para MEMBRO e SERVIDOR, que não há assunto, resumo nem tema de
+sigiloso, nem ids, nomes ou e-mails de outro setor. Em `infra/test/stack.test.ts`, o bloco "IA (Bedrock)" confere que
+só a role da Api tem `bedrock:InvokeModel`, nos ARNs exatos do profile e dos foundation models, com condição e sem `*`. O roteiro acima foi
 executado em Chromium com axe-core (WCAG 2.1 A/AA) em todas as telas, em 1366 px e em 390 px, sem violações. A
 validação completa de acessibilidade ainda depende de teste manual com leitor de tela.
 
@@ -170,6 +202,19 @@ A saída `Url` da pilha é o endereço da aplicação. Para o resumo diário, pa
 e, com o SES em sandbox, `-c destinatarioDemo=<e-mail verificado>`. Para limpar: `npm run destroy` (todos os recursos
 usam `RemovalPolicy.DESTROY`).
 
+**Amazon Bedrock.** Antes do deploy, abra o console do Bedrock em **us-east-1** (Model catalog / Model access) e
+confirme que o **Amazon Nova Lite** está liberado para a conta. Sem isso, a busca e o resumo com IA respondem 503
+("O modelo de IA não está habilitado para esta conta…") e o resto da aplicação segue normal. A pilha define na Lambda
+Api `BEDROCK_MODEL_ID=us.amazon.nova-lite-v1:0` e `IA_TIMEOUT_MS=10000` e dá à role dela só `bedrock:InvokeModel` em:
+
+- `arn:aws:bedrock:us-east-1:<conta>:inference-profile/us.amazon.nova-lite-v1:0`
+- `arn:aws:bedrock:{us-east-1,us-east-2,us-west-2}::foundation-model/amazon.nova-lite-v1:0`, com a condição
+  `bedrock:InferenceProfileArn` igual ao ARN do profile (o modelo só é chamado por meio dele)
+
+Para outro modelo, passe `-c modeloIa=<id>` e, se for um inference profile, `-c regioesModeloIa=<região1>,<região2>`
+com as regiões de destino dele (padrão `us-east-1,us-east-2,us-west-2`). Um ID sem prefixo geográfico (por exemplo
+`amazon.nova-lite-v1:0`) recebe permissão só no foundation model de us-east-1. Curingas são recusados.
+
 ## Segurança e LGPD
 
 - **Nenhum endpoint anônimo.** O API Gateway valida o ID token do Cognito; a Lambda lê `custom:idUsuario`,
@@ -185,6 +230,19 @@ usam `RemovalPolicy.DESTROY`).
 - **Criptografia:** DynamoDB com KMS (chave gerenciada pela AWS, `aws/dynamodb`) e PITR; S3 privado (OAC, SSE, só HTTPS); CloudFront com CSP, HSTS e
   `X-Frame-Options`.
 - **Logs** estruturados sem corpo de requisição nem conteúdo de expediente; log de acesso da API sem query string.
+- **IA sem vazamento de sigilo:** a minimização fica no backend, depois do escopo de setor e da máscara da RN6.
+  - Vai ao modelo, na busca: o texto digitado (tratado como dado, não como instrução), as listas de domínio do
+    catálogo, as datas de referência e os responsáveis do próprio setor (id e nome).
+  - Vai ao modelo, no resumo: contadores, alertas não lidos e até 8 itens da fila com etiqueta, gerenciador, situação
+    do prazo, dias restantes, prioridade, ação pendente e motivos da pontuação. Sigiloso vai só com etiqueta, situação
+    do prazo e prioridade, para qualquer perfil (inclusive membro e chefe).
+  - Nunca vai: assunto, resumo, tema, número de referência, órgão de origem, motivo de urgência de sigiloso, nomes de
+    pessoas no resumo, e-mails, ids, dados de outro setor.
+  - A resposta do modelo não é confiável: a busca só aceita chaves e valores das listas brancas dos filtros (o resto é
+    descartado e mostrado), e o resumo é texto puro exibido sem HTML. Tudo o que vem da IA é rotulado como tal.
+  - Prompt e resposta nunca vão para log; falhas registram só o nome do erro.
+  - O inference profile `us.` processa as chamadas só em regiões dos EUA (us-east-1, us-east-2, us-west-2). Os dados
+    são sintéticos; numa adoção real, essa transferência precisa ser avaliada pela área de proteção de dados.
 - **LGPD:** só dados sintéticos do kit; eventos e e-mails levam o mínimo (etiquetas e números); sessão em
   `sessionStorage`; nenhuma credencial no repositório.
 
@@ -200,6 +258,11 @@ us-east-1, com preços sob demanda. Confirme no AWS Pricing Calculator antes de 
 | API Gateway REST | ~100 mil requisições | < US$ 1 |
 | CloudFront + S3 | poucos GB | < US$ 1 |
 | Cognito, EventBridge, SES | dentro das faixas iniciais | ~US$ 0 |
+| Amazon Bedrock (Nova Lite) | ~10 usuários × 20 chamadas/dia × ~2 mil tokens ≈ 9 milhões de tokens | < US$ 1 |
+
+Para o Bedrock, a estimativa usa cerca de US$ 0,06 por milhão de tokens de entrada e US$ 0,24 por milhão de saída do
+Nova Lite; confira na [página de preços do Bedrock](https://aws.amazon.com/bedrock/pricing/). O cache de 5 minutos do
+resumo evita chamadas repetidas.
 
 O custo dominante é a leitura do painel (o setor inteiro por consulta). O próximo passo de otimização é projetar no
 GSI1 só as colunas da lista ou guardar os ativos do setor em cache.
@@ -210,8 +273,7 @@ GSI1 só as colunas da lista ou guardar os ativos do setor em cache.
 - Autenticação federada com o provedor do MPF (SAML/OIDC no Cognito) e políticas no Amazon Verified Permissions.
 - Auditoria (trilha de quem viu o quê em sigilosos), CloudWatch dashboards e alarmes, WAF no CloudFront.
 - Paginação por chave e projeções no GSI para setores com dezenas de milhares de expedientes.
-- Bedrock para resumo do dia em linguagem natural e busca em linguagem natural convertida em filtros, sem enviar
-  conteúdo sigiloso.
+- Guardrails do Bedrock e avaliação de qualidade das respostas da busca e do resumo com IA.
 - Teste com leitor de tela e com usuários dos três perfis.
 
 **Reuso:** o modelo e o código não dependem do gabinete; qualquer setor do Único (ou outro órgão com caixas e prazos)

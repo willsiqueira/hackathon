@@ -5,9 +5,10 @@ import { AutenticacaoService } from '../../core/autenticacao.service';
 import { AvisosService } from '../../core/avisos.service';
 import { CatalogoService } from '../../core/catalogo.service';
 import { mensagemDeErro } from '../../core/interceptadores';
-import type { Contadores, Criterios, FiltroSalvo, Inicio, Widget } from '../../core/modelos';
+import type { Contadores, Criterios, FiltroSalvo, Inicio, ResumoDiaIa, Widget } from '../../core/modelos';
 import { SeloGerenciador, SeloPrazo, SeloPrioridade } from '../../compartilhado/selos';
 import { dataBr, dataHoraBr, dataPorExtenso } from '../../compartilhado/formatos';
+import { AVISO_PRIVACIDADE_RESUMO, mensagemFalhaIa, rotuloOrigemIa } from '../../compartilhado/ia';
 
 interface Atalho {
   chave: keyof Contadores;
@@ -30,9 +31,9 @@ export const ATALHOS: Atalho[] = [
   { chave: 'novos24h', rotulo: 'Novos em 24h', criterios: { novo: true } },
 ];
 
-const NOMES_WIDGET: Record<Widget['id'], string> = {
-  contadores: 'Contadores', proximo: 'Próximo processo', prazos: 'Próximos prazos', alertas: 'Alertas não lidos',
-  informes: 'Informes', filtros: 'Filtros salvos',
+export const NOMES_WIDGET: Record<Widget['id'], string> = {
+  contadores: 'Contadores', resumoIa: 'Resumo do dia (IA)', proximo: 'Próximo processo', prazos: 'Próximos prazos',
+  alertas: 'Alertas não lidos', informes: 'Informes', filtros: 'Filtros salvos',
 };
 
 @Component({
@@ -57,6 +58,13 @@ export class InicioPagina implements OnInit {
   protected readonly nomesWidget = NOMES_WIDGET;
   protected readonly dataBr = dataBr;
   protected readonly dataHoraBr = dataHoraBr;
+
+  // Resumo do dia com IA: só gera quando o usuário pede (nada de IA vem em /api/inicio).
+  protected readonly resumoIa = signal<ResumoDiaIa | null>(null);
+  protected readonly gerandoResumo = signal(false);
+  protected readonly erroResumo = signal('');
+  protected readonly avisoResumo = AVISO_PRIVACIDADE_RESUMO;
+  protected readonly rotuloOrigemIa = rotuloOrigemIa;
 
   protected readonly visiveis = computed(() => this.widgets().filter((w) => w.visivel).map((w) => w.id));
   protected readonly contadores = computed(() => this.dados()?.contadores[this.gerenciadorContadores()] ?? null);
@@ -89,6 +97,20 @@ export class InicioPagina implements OnInit {
         criterios: atalho.criterios ? JSON.stringify(atalho.criterios) : null,
       },
     });
+  }
+
+  protected async gerarResumo(): Promise<void> {
+    if (this.gerandoResumo()) return;
+    this.gerandoResumo.set(true);
+    this.erroResumo.set('');
+    try {
+      this.resumoIa.set(await this.api.resumoDiaIa());
+      setTimeout(() => document.getElementById('texto-resumo-ia')?.focus(), 0);
+    } catch (e) {
+      this.erroResumo.set(mensagemFalhaIa(e));
+    } finally {
+      this.gerandoResumo.set(false);
+    }
   }
 
   protected abrirFiltro(filtro: FiltroSalvo): void {

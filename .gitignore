@@ -9,6 +9,8 @@ cdk-outputs.json
 __pycache__/
 .venv/
 .playwright-mcp/
+# Artefatos temporários de workflows do Kiro (planos, revisões, relatórios)
+.agents/
 
 # Secrets and local config (never commit AWS credentials)
 .env

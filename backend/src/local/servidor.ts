@@ -4,6 +4,8 @@
 //   npm start                                  # http://127.0.0.1:3000
 //   PORTA=3001 DATA_REFERENCIA=agora npm start
 //   TABELA=Expedientes npm start               # usa o DynamoDB (credenciais AWS no ambiente)
+//   IA_MODO=fake npm start                     # IA em modo demonstração (padrão sem BEDROCK_MODEL_ID; sem rede)
+//   BEDROCK_MODEL_ID=us.amazon.nova-lite-v1:0 AWS_PROFILE=hackathon npm start   # IA pelo Amazon Bedrock
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { existsSync } from 'node:fs';
@@ -18,6 +20,7 @@ import { TabelaMemoria, carregarItensJson } from '../dados/tabela-memoria.js';
 import { publicadorEmProcesso } from '../eventos/notificador.js';
 import { criarRelogio, DATA_REFERENCIA_BASE } from '../config.js';
 import { ErroValidacao } from '../dominio/erros.js';
+import { criarIa, descreverIa } from '../servicos/ia.js';
 
 const raiz = fileURLToPath(new URL('../../..', import.meta.url)); // raiz do repositório
 const PORTA = Number(process.env.PORTA ?? 3000);
@@ -84,7 +87,9 @@ async function principal(): Promise<void> {
   const repo = await criarRepositorio();
   const relogio = criarRelogio(process.env.DATA_REFERENCIA ?? DATA_REFERENCIA_BASE);
   const emissor = new EmissorTokenLocal();
-  const tratar = criarApi({ repo, relogio, eventos: publicadorEmProcesso(repo) });
+  const ia = criarIa();
+  console.log(descreverIa(ia));
+  const tratar = criarApi({ repo, relogio, eventos: publicadorEmProcesso(repo), ia });
   const temFrontend = existsSync(join(FRONTEND_DIST, 'index.html'));
 
   const servidor = createServer(async (req, res) => {

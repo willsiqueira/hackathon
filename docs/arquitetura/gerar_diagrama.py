@@ -18,6 +18,7 @@ from diagrams.aws.devtools import XRay
 from diagrams.aws.engagement import SimpleEmailServiceSes
 from diagrams.aws.integration import Eventbridge, EventbridgeScheduler, SimpleQueueServiceSqs
 from diagrams.aws.management import Cloudformation, Cloudwatch
+from diagrams.aws.ml import Bedrock
 from diagrams.aws.network import APIGateway, CloudFront
 from diagrams.aws.security import Cognito
 from diagrams.aws.storage import SimpleStorageServiceS3
@@ -52,6 +53,9 @@ with Diagram(
     with Cluster("Dados"):
         tabela = Dynamodb("DynamoDB Expedientes\ntabela única, GSI1, GSI2\nsob demanda, KMS, PITR")
 
+    with Cluster("IA generativa"):
+        bedrock = Bedrock("Amazon Bedrock\nNova Lite (perfil us.)\nbusca e resumo do dia")
+
     with Cluster("Eventos e notificações (assíncrono)"):
         barramento = Eventbridge("EventBridge\nExpedienteDesignado")
         notificador = Lambda("Lambda Notificador")
@@ -73,6 +77,7 @@ with Diagram(
     cognito >> Edge(style="dashed") >> api_gw
     api_gw >> api
     api >> Edge(xlabel="Query por SETOR#") >> tabela
+    api >> Edge(xlabel="Converse, só dados\nminimizados") >> bedrock
 
     # Assíncrono
     api >> Edge(xlabel="evento") >> barramento

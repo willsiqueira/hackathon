@@ -3,7 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
   Carga, Catalogos, Criterios, DetalheExpediente, Expediente, FiltroSalvo, Indicadores, Inicio, Marcador, Me, Notificacao,
-  ParametrosLote, PessoaSetor, Preferencias, PreviaLote, RegistroLote, RespostaPainel, ResultadoLote, ResumoDiario, TipoAcao,
+  ParametrosLote, PessoaSetor, Preferencias, PreviaLote, RegistroLote, RespostaBuscaIa, RespostaPainel, ResultadoLote, ResumoDiaIa,
+  ResumoDiario, TipoAcao,
 } from './modelos';
 
 export interface ConsultaPainel {
@@ -86,4 +87,9 @@ export class ApiService {
     this.enviar<{ atualizadas: number }>('POST', 'notificacoes/lidas', corpo);
 
   indicadores = (consulta: { gerenciador?: string; dias?: number }) => this.get<Indicadores>('indicadores', consulta);
+
+  /** Texto livre → critérios do painel, para revisão antes de aplicar (Bedrock; nada de expediente vai ao modelo). */
+  buscaIa = (texto: string) => this.enviar<RespostaBuscaIa>('POST', 'ia/busca', { texto });
+  /** Resumo do dia gerado sob demanda, só com dados minimizados. */
+  resumoDiaIa = () => this.enviar<ResumoDiaIa>('POST', 'ia/resumo-dia', {});
 }

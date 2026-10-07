@@ -3,11 +3,14 @@
 import type { Repositorio } from '../dados/repositorio.js';
 import type { Setor, Usuario } from '../dominio/tipos.js';
 import type { PublicadorEventos } from '../eventos/eventos.js';
+import type { Ia } from '../servicos/ia.js';
 import type { Arquivo } from './http.js';
 
 export interface Contexto {
   repo: Repositorio;
   eventos: PublicadorEventos;
+  /** Modelo de linguagem (Bedrock ou modo demonstração). */
+  ia: Ia;
   agora: Date;
   usuario: Usuario;
   setor: Setor;

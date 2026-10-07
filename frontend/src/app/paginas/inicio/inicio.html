@@ -68,6 +68,37 @@
             </div>
           </section>
         }
+        @case ('resumoIa') {
+          <section class="col-12" aria-labelledby="titulo-resumo-ia">
+            <div class="cartao">
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h2 id="titulo-resumo-ia" class="h5 mb-0 flex-grow-1">Resumo do dia (IA)</h2>
+                <button type="button" class="btn btn-outline-primary btn-sm" aria-describedby="aviso-resumo-ia"
+                  [disabled]="gerandoResumo()" (click)="gerarResumo()">
+                  @if (gerandoResumo()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+                  {{ resumoIa() ? 'Gerar de novo' : 'Gerar resumo' }}
+                </button>
+              </div>
+              <p id="aviso-resumo-ia" class="small text-secondary mb-2">
+                <span class="badge text-bg-secondary me-1">Privacidade</span>{{ avisoResumo }}
+              </p>
+              <p class="small mb-0" aria-live="polite">{{ gerandoResumo() ? 'Gerando resumo…' : '' }}</p>
+              @if (erroResumo()) {
+                <div role="alert" class="alert alert-warning mt-2 mb-0">{{ erroResumo() }} Os contadores desta tela continuam valendo.</div>
+              }
+              @if (resumoIa(); as r) {
+                <div id="texto-resumo-ia" class="mt-2 p-2 bg-light rounded" tabindex="-1" role="region" aria-label="Resumo gerado por IA">
+                  <p class="mb-1"><span class="badge text-bg-info">Gerado por IA, confira antes de agir</span></p>
+                  <p class="mb-1" style="white-space: pre-line">{{ r.texto }}</p>
+                  <p class="small text-secondary mb-0">
+                    {{ rotuloOrigemIa(r.origem) }} · {{ dataHoraBr(r.geradoEm) }}{{ r.doCache ? ' (reaproveitado dos últimos minutos)' : '' }}
+                    · {{ r.sigilososSemConteudo }} sigiloso(s) citado(s) só pela etiqueta
+                  </p>
+                </div>
+              }
+            </div>
+          </section>
+        }
         @case ('proximo') {
           <section class="col-12 col-lg-5" aria-labelledby="titulo-proximo">
             <div class="cartao h-100">
