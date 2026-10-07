@@ -1,0 +1,188 @@
+<div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+  <div class="flex-grow-1">
+    <p class="text-secondary small mb-0">{{ hoje() }}</p>
+    <h1 class="titulo-pagina h2 mb-0">Bom dia, {{ me()?.usuario?.nome?.split(' ')?.[0] }}</h1>
+    @if (resumoDoDia()) {
+      <p class="mb-0 mt-1">No setor hoje: <strong>{{ resumoDoDia() }}</strong>.</p>
+    }
+  </div>
+  <a routerLink="/foco" class="btn btn-primary">Começar pelo próximo processo</a>
+  <button type="button" class="btn btn-outline-secondary" (click)="personalizando.set(!personalizando())" [attr.aria-expanded]="personalizando()" aria-controls="personalizar">
+    Personalizar tela
+  </button>
+</div>
+
+@if (personalizando()) {
+  <section id="personalizar" class="cartao mb-3" aria-labelledby="titulo-personalizar">
+    <h2 id="titulo-personalizar" class="h6">Quais blocos aparecem e em que ordem</h2>
+    <ol class="list-unstyled mb-3">
+      @for (w of widgets(); track w.id; let i = $index; let primeiro = $first; let ultimo = $last) {
+        <li class="d-flex align-items-center gap-2 py-1 border-bottom">
+          <div class="form-check flex-grow-1 mb-0">
+            <input class="form-check-input" type="checkbox" [id]="'widget-' + w.id" [checked]="w.visivel" (change)="alternar(w.id)">
+            <label class="form-check-label" [for]="'widget-' + w.id">{{ nomesWidget[w.id] }}</label>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" [id]="'mover-' + w.id + '-cima'" [disabled]="primeiro" (click)="mover(i, -1)">
+            Subir<span class="visually-hidden"> {{ nomesWidget[w.id] }}</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" [id]="'mover-' + w.id + '-baixo'" [disabled]="ultimo" (click)="mover(i, 1)">
+            Descer<span class="visually-hidden"> {{ nomesWidget[w.id] }}</span>
+          </button>
+        </li>
+      }
+    </ol>
+    <button type="button" class="btn btn-primary me-2" (click)="salvarWidgets()">Salvar</button>
+    <button type="button" class="btn btn-link" (click)="cancelarPersonalizacao()">Cancelar</button>
+  </section>
+}
+
+@if (dados(); as d) {
+  <div class="row g-3">
+    @for (id of visiveis(); track id) {
+      @switch (id) {
+        @case ('contadores') {
+          <section class="col-12" aria-labelledby="titulo-contadores">
+            <div class="cartao">
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <h2 id="titulo-contadores" class="h5 mb-0 flex-grow-1">Contadores do setor</h2>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Gerenciador dos contadores">
+                  @for (g of abasContadores(); track g) {
+                    <button type="button" class="btn" [class.btn-primary]="gerenciadorContadores() === g" [class.btn-outline-primary]="gerenciadorContadores() !== g"
+                      [attr.aria-pressed]="gerenciadorContadores() === g" (click)="gerenciadorContadores.set(g)">{{ rotuloAba(g) }}</button>
+                  }
+                </div>
+              </div>
+              @if (contadores(); as c) {
+                <ul class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-2 list-unstyled mb-0">
+                  @for (a of atalhos; track a.chave) {
+                    <li class="col">
+                      <button type="button" class="btn btn-light border w-100 text-start h-100" (click)="abrir(a)">
+                        <span class="numero-grande d-block" [class.text-danger]="a.destaque && c[a.chave] > 0">{{ c[a.chave] }}</span>
+                        <span class="small">{{ a.rotulo }}</span>
+                        <span class="visually-hidden">, {{ rotuloAba(gerenciadorContadores()) }}. Abrir no painel.</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          </section>
+        }
+        @case ('proximo') {
+          <section class="col-12 col-lg-5" aria-labelledby="titulo-proximo">
+            <div class="cartao h-100">
+              <h2 id="titulo-proximo" class="h5">Próximo processo</h2>
+              @if (d.proximoExpediente; as p) {
+                <p class="mb-1"><app-selo-gerenciador [gerenciador]="p.gerenciador" /> <strong>{{ p.etiqueta }}</strong></p>
+                <p class="mb-2" [class.restrito]="p.conteudoRestrito">{{ p.assunto }}</p>
+                <p class="mb-2 d-flex flex-wrap gap-2">
+                  <app-selo-prazo [status]="p.statusPrazo" [dias]="p.diasRestantes" />
+                  <app-selo-prioridade [prioridade]="p.prioridade" [pontos]="p.pontuacaoPrioridade" />
+                </p>
+                <p class="small mb-3">Ação pendente: <strong>{{ p.acaoPendente }}</strong> · prazo {{ dataBr(p.dataPrazo) }}</p>
+                <a class="btn btn-outline-primary btn-sm me-2" [routerLink]="['/expedientes', p.idExpediente]">Abrir {{ p.etiqueta }}</a>
+                <a class="btn btn-link btn-sm" routerLink="/foco">Ver a fila</a>
+              } @else {
+                <p class="mb-0">Nada pendente na fila. 🎉</p>
+              }
+            </div>
+          </section>
+        }
+        @case ('prazos') {
+          <section class="col-12 col-lg-7" aria-labelledby="titulo-prazos">
+            <div class="cartao h-100">
+              <h2 id="titulo-prazos" class="h5">Próximos prazos</h2>
+              <div tabindex="0" class="table-responsive">
+                <table class="table table-sm tabela-expedientes mb-0">
+                  <caption class="visually-hidden">Próximos prazos do setor, do mais próximo ao mais distante</caption>
+                  <thead>
+                    <tr>
+                      <th id="pp-etiqueta" scope="col">Expediente</th>
+                      <th id="pp-prazo" scope="col">Prazo</th>
+                      <th id="pp-situacao" scope="col">Situação</th>
+                      <th id="pp-acao" scope="col" class="d-none d-md-table-cell">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (e of d.proximosPrazos; track e.idExpediente) {
+                      <tr>
+                        <td headers="pp-etiqueta"><a [routerLink]="['/expedientes', e.idExpediente]">{{ e.etiqueta }}</a></td>
+                        <td headers="pp-prazo">{{ dataBr(e.dataPrazo) }}</td>
+                        <td headers="pp-situacao"><app-selo-prazo [status]="e.statusPrazo" [dias]="e.diasRestantes" /></td>
+                        <td headers="pp-acao" class="d-none d-md-table-cell small">{{ e.acaoPendente }}</td>
+                      </tr>
+                    } @empty {
+                      <tr><td colspan="4">Nenhum prazo em aberto.</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (d.vencidos.length) {
+                <p class="small mt-2 mb-0">Há também <strong>{{ d.contadores['TODOS'].vencidos }}</strong> vencidos.
+                  <button type="button" class="btn btn-link btn-sm p-0 align-baseline" (click)="abrir(atalhos[0])">Ver vencidos no painel</button></p>
+              }
+            </div>
+          </section>
+        }
+        @case ('alertas') {
+          <section class="col-12 col-lg-6" aria-labelledby="titulo-alertas">
+            <div class="cartao h-100">
+              <h2 id="titulo-alertas" class="h5">Alertas não lidos <span class="badge text-bg-warning">{{ d.alertas.naoLidas }}</span></h2>
+              <ul class="list-unstyled mb-2">
+                @for (n of d.alertas.itens; track n.idNotificacao) {
+                  <li class="py-2 border-bottom">
+                    <span class="badge me-1" [class.text-bg-danger]="n.severidade === 'CRITICO'" [class.text-bg-warning]="n.severidade === 'ATENCAO'" [class.text-bg-primary]="n.severidade === 'INFO'">
+                      {{ catalogo.descricao('SEVERIDADE', n.severidade) }}</span>
+                    <strong>{{ n.titulo }}</strong>
+                    <div class="small">{{ n.mensagem }} <span class="text-secondary">· {{ dataHoraBr(n.dataHora) }}</span></div>
+                  </li>
+                } @empty {
+                  <li>Nenhum alerta não lido.</li>
+                }
+              </ul>
+              <a routerLink="/alertas">Ver todos os alertas</a>
+            </div>
+          </section>
+        }
+        @case ('informes') {
+          <section class="col-12 col-lg-6" aria-labelledby="titulo-informes">
+            <div class="cartao h-100">
+              <h2 id="titulo-informes" class="h5">Informes</h2>
+              <ul class="list-unstyled mb-0">
+                @for (i of d.informes; track i.idNoticia) {
+                  <li class="py-2 border-bottom">
+                    @if (i.destaque) { <span class="badge text-bg-primary me-1">Destaque</span> }
+                    <strong>{{ i.titulo }}</strong>
+                    <div class="small text-secondary">{{ i.conteudo }}</div>
+                  </li>
+                } @empty {
+                  <li>Nenhum informe vigente.</li>
+                }
+              </ul>
+            </div>
+          </section>
+        }
+        @case ('filtros') {
+          <section class="col-12" aria-labelledby="titulo-filtros">
+            <div class="cartao">
+              <h2 id="titulo-filtros" class="h5">Filtros salvos</h2>
+              <ul class="list-inline mb-0">
+                @for (f of filtros(); track f.idFiltro) {
+                  <li class="list-inline-item mb-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" (click)="abrirFiltro(f)">
+                      {{ f.nome }}@if (f.nomeAutor) {<span class="small"> · de {{ f.nomeAutor }}</span>}
+                    </button>
+                  </li>
+                } @empty {
+                  <li>Nenhum filtro salvo. Crie um no painel.</li>
+                }
+              </ul>
+            </div>
+          </section>
+        }
+      }
+    }
+  </div>
+} @else {
+  <p aria-busy="true">Carregando a tela inicial…</p>
+}

@@ -1,0 +1,153 @@
+<div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+  <div class="flex-grow-1">
+    <h1 class="titulo-pagina h2 mb-0">Indicadores</h1>
+    <p class="text-secondary small mb-0">Estoque, prazos e produtividade. Baixados entram aqui (e não no painel).</p>
+  </div>
+  <form class="d-flex flex-wrap align-items-end gap-2" (ngSubmit)="carregar()">
+    <div>
+      <label for="ind-ger" class="form-label small mb-0">Gerenciador</label>
+      <select id="ind-ger" name="ger" class="form-select form-select-sm" [(ngModel)]="gerenciador">
+        <option value="">Todos</option>
+        @for (g of me()?.setor?.gerenciadores ?? []; track g) { <option [value]="g">{{ catalogo.descricao('GERENCIADOR', g) }}</option> }
+      </select>
+    </div>
+    <div>
+      <label for="ind-dias" class="form-label small mb-0">Período</label>
+      <select id="ind-dias" name="dias" class="form-select form-select-sm" [(ngModel)]="dias">
+        @for (d of [7, 30, 60, 90]; track d) { <option [ngValue]="d">Últimos {{ d }} dias</option> }
+      </select>
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Atualizar</button>
+  </form>
+</div>
+
+@if (dados(); as d) {
+  <ul class="row row-cols-2 row-cols-md-4 g-3 list-unstyled mb-3">
+    @for (k of [['estoque', 'Estoque com ação'], ['vencidos', 'Vencidos'], ['percentualCumprimento', 'Prazos cumpridos no prazo (%)'], ['parados30dias', 'Parados há mais de 30 dias'],
+                ['entradas', 'Entradas no período'], ['saidas', 'Saídas no período'], ['urgentes', 'Urgentes'], ['venceHoje', 'Vencem hoje']]; track k[0]) {
+      <li class="col"><div class="cartao h-100"><div class="numero-grande">{{ kpi(k[0]) }}</div><div class="small">{{ k[1] }}</div></div></li>
+    }
+  </ul>
+
+  <div class="row g-3">
+    <!-- Fluxo diário -->
+    <section class="col-12 col-xl-6" aria-labelledby="g-fluxo">
+      <div class="cartao h-100">
+        <h2 id="g-fluxo" class="h6">Entradas e saídas por dia</h2>
+        <div class="grafico-barras" aria-hidden="true">
+          @for (s of d.serie; track s.data) {
+            <div class="d-flex align-items-end gap-0 flex-fill h-100">
+              <div class="barra" [style.height.%]="pct(s.entradas, maxFluxo())" style="background:#9fb0d6"></div>
+              <div class="barra" [style.height.%]="pct(s.saidas, maxFluxo())" style="background:#1b3470"></div>
+            </div>
+          }
+        </div>
+        <p class="small mt-1 mb-2"><span aria-hidden="true" style="color:#9fb0d6">■</span> Entradas · <span aria-hidden="true" style="color:#1b3470">■</span> Saídas · {{ dataBr(d.periodo.desde) }} a {{ dataBr(d.periodo.ate) }}</p>
+        <button type="button" class="btn btn-link btn-sm p-0" (click)="alternarTabela('fluxo')" [attr.aria-expanded]="!!mostrarTabela()['fluxo']" aria-controls="t-fluxo">Tabela de dados</button>
+        @if (mostrarTabela()['fluxo']) {
+          <div id="t-fluxo" tabindex="0" class="table-responsive mt-2" style="max-height: 16rem">
+            <table class="table table-sm mb-0">
+              <caption>Entradas, recebimentos, saídas e estoque por dia</caption>
+              <thead><tr><th id="tf-dia" scope="col">Dia</th><th id="tf-ent" scope="col" class="text-end">Entradas</th><th id="tf-rec" scope="col" class="text-end">Recebimentos</th>
+                <th id="tf-sai" scope="col" class="text-end">Saídas</th><th id="tf-est" scope="col" class="text-end">Estoque</th><th id="tf-ven" scope="col" class="text-end">Vencidos</th></tr></thead>
+              <tbody>
+                @for (s of d.serie; track s.data) {
+                  <tr><td headers="tf-dia">{{ dataBr(s.data) }}</td><td headers="tf-ent" class="text-end">{{ s.entradas }}</td><td headers="tf-rec" class="text-end">{{ s.recebimentos }}</td>
+                    <td headers="tf-sai" class="text-end">{{ s.saidas }}</td><td headers="tf-est" class="text-end">{{ s.aReceber + s.noSetor }}</td><td headers="tf-ven" class="text-end">{{ s.vencidos }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Estoque -->
+    <section class="col-12 col-xl-6" aria-labelledby="g-estoque">
+      <div class="cartao h-100">
+        <h2 id="g-estoque" class="h6">Estoque (a receber + no setor) e vencidos</h2>
+        <div class="grafico-barras" aria-hidden="true">
+          @for (s of d.serie; track s.data) {
+            <div class="d-flex flex-column justify-content-end flex-fill h-100">
+              <div class="barra" [style.height.%]="pct(s.aReceber + s.noSetor - s.vencidos, maxEstoque())" style="background:#9fb0d6"></div>
+              <div class="barra" [style.height.%]="pct(s.vencidos, maxEstoque())" style="background:#c62828;border-radius:0"></div>
+            </div>
+          }
+        </div>
+        <p class="small mt-1 mb-2"><span aria-hidden="true" style="color:#9fb0d6">■</span> Em dia · <span aria-hidden="true" style="color:#c62828">■</span> Vencidos (a tabela do gráfico ao lado traz os números)</p>
+      </div>
+    </section>
+
+    <!-- Prazos por situação -->
+    <section class="col-12 col-md-6" aria-labelledby="g-prazos">
+      <div class="cartao h-100">
+        <h2 id="g-prazos" class="h6">Pendências por situação do prazo</h2>
+        <table class="table table-sm mb-0">
+          <caption class="visually-hidden">Quantidade de expedientes com ação por situação do prazo</caption>
+          <thead><tr><th id="gp-sit" scope="col">Situação</th><th id="gp-qtd" scope="col" class="text-end">Quantidade</th><th id="gp-bar" scope="col"><span class="visually-hidden">Proporção</span></th></tr></thead>
+          <tbody>
+            @for (p of d.prazosPorSituacao; track p.chave) {
+              <tr>
+                <td headers="gp-sit">{{ catalogo.descricao('STATUS_PRAZO', p.chave) }}</td>
+                <td headers="gp-qtd" class="text-end">{{ p.quantidade }}</td>
+                <td headers="gp-bar" class="w-50"><div class="rounded" [style.width.%]="pct(p.quantidade, maxPrazo())" [style.background]="catalogo.cor('STATUS_PRAZO', p.chave)" style="height:.8rem" aria-hidden="true"></div></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Assuntos -->
+    <section class="col-12 col-md-6" aria-labelledby="g-assuntos">
+      <div class="cartao h-100">
+        <h2 id="g-assuntos" class="h6">Assuntos com mais pendências</h2>
+        <table class="table table-sm mb-0">
+          <caption class="visually-hidden">Dez assuntos com mais expedientes pendentes (sigilosos não entram)</caption>
+          <thead><tr><th id="ga-ass" scope="col">Assunto</th><th id="ga-qtd" scope="col" class="text-end">Quantidade</th><th id="ga-bar" scope="col"><span class="visually-hidden">Proporção</span></th></tr></thead>
+          <tbody>
+            @for (p of d.pendenciasPorAssunto; track p.chave) {
+              <tr>
+                <td headers="ga-ass">{{ p.chave }}</td><td headers="ga-qtd" class="text-end">{{ p.quantidade }}</td>
+                <td headers="ga-bar" class="w-50"><div class="rounded" [style.width.%]="pct(p.quantidade, maxAssunto())" style="height:.8rem;background:#1b3470" aria-hidden="true"></div></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Produtividade (só membro e chefe) -->
+    <section class="col-12" aria-labelledby="g-prod">
+      <div class="cartao">
+        <h2 id="g-prod" class="h6">Produtividade por pessoa no período</h2>
+        @if (d.produtividade; as prod) {
+          <div tabindex="0" class="table-responsive">
+            <table class="table table-sm mb-0">
+              <caption class="visually-hidden">Ações por pessoa no período</caption>
+              <thead><tr>
+                <th id="pr-nome" scope="col">Pessoa</th><th id="pr-rec" scope="col" class="text-end">Recebimentos</th><th id="pr-des" scope="col" class="text-end">Designações</th>
+                <th id="pr-min" scope="col" class="text-end">Minutas</th><th id="pr-ass" scope="col" class="text-end">Assinaturas</th><th id="pr-env" scope="col" class="text-end">Envios</th>
+                <th id="pr-tot" scope="col" class="text-end">Total</th><th id="pr-bar" scope="col"><span class="visually-hidden">Proporção</span></th>
+              </tr></thead>
+              <tbody>
+                @for (p of prod; track p.idUsuario) {
+                  <tr>
+                    <td headers="pr-nome">{{ p.nome }}</td><td headers="pr-rec" class="text-end">{{ p['recebimentos'] }}</td><td headers="pr-des" class="text-end">{{ p['designacoes'] }}</td>
+                    <td headers="pr-min" class="text-end">{{ p['minutas'] }}</td><td headers="pr-ass" class="text-end">{{ p['assinaturas'] }}</td><td headers="pr-env" class="text-end">{{ p['envios'] }}</td>
+                    <td headers="pr-tot" class="text-end fw-semibold">{{ p['totalAcoes'] }}</td>
+                    <td headers="pr-bar" class="w-25"><div class="rounded" [style.width.%]="pct(+p['totalAcoes'], maxProd())" style="height:.8rem;background:#2e7d32" aria-hidden="true"></div></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="mb-0 small">A produtividade individual é visível só para membro e chefe de gabinete.</p>
+        }
+      </div>
+    </section>
+  </div>
+} @else {
+  <p aria-busy="true">Carregando indicadores…</p>
+}

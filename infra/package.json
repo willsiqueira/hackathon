@@ -1,0 +1,27 @@
+{
+  "name": "lex-gabinete-infra",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Infraestrutura do painel de expedientes (AWS CDK v2)",
+  "type": "module",
+  "scripts": {
+    "synth": "npx aws-cdk@2 synth --profile hackathon",
+    "deploy": "npx aws-cdk@2 synth --profile hackathon --quiet && npx aws-cdk@2 deploy --profile hackathon --require-approval broadening",
+    "destroy": "npx aws-cdk@2 destroy --profile hackathon",
+    "test": "vitest --run",
+    "typecheck": "tsc --noEmit",
+    "usuarios": "AWS_PROFILE=hackathon tsx scripts/criar-usuarios.ts"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.272.0",
+    "constructs": "10.8.1"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "3.1147.0",
+    "@types/node": "22.19.1",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

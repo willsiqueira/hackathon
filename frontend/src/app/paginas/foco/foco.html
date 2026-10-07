@@ -1,0 +1,70 @@
+<div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+  <div class="flex-grow-1">
+    <h1 class="titulo-pagina h2 mb-0">Próximo processo</h1>
+    <p class="text-secondary small mb-0">Um por vez, na ordem da fila: prazo mais próximo primeiro e, no empate, maior prioridade.</p>
+  </div>
+  <form class="d-flex flex-wrap align-items-end gap-2" (ngSubmit)="carregar()">
+    <div>
+      <label for="foco-ger" class="form-label small mb-0">Gerenciador</label>
+      <select id="foco-ger" name="ger" class="form-select form-select-sm" [(ngModel)]="gerenciador">
+        <option value="">Todos</option>
+        @for (g of gerenciadores(); track g) { <option [value]="g">{{ catalogo.descricao('GERENCIADOR', g) }}</option> }
+      </select>
+    </div>
+    <div class="form-check mb-1">
+      <input id="foco-meus" name="meus" type="checkbox" class="form-check-input" [(ngModel)]="somenteMeus">
+      <label for="foco-meus" class="form-check-label">Só a minha fila</label>
+    </div>
+    <button type="submit" class="btn btn-sm btn-outline-primary">Atualizar fila</button>
+  </form>
+</div>
+
+<p class="small" id="atalhos-foco">Atalhos: <kbd>N</kbd> próximo, <kbd>P</kbd> anterior, <kbd>A</kbd> abrir, <kbd>X</kbd> executar a ação pendente.</p>
+
+@if (carregando()) {
+  <p aria-busy="true">Carregando a fila…</p>
+} @else if (atual(); as e) {
+  <section id="cartao-foco" class="cartao" tabindex="-1" aria-labelledby="foco-titulo" aria-describedby="atalhos-foco">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      <span class="badge text-bg-primary">{{ indice() + 1 }} de {{ fila().length }}</span>
+      <app-selo-gerenciador [gerenciador]="e.gerenciador" />
+      <span class="badge text-bg-light border">{{ catalogo.descricao('CAIXA', e.caixa) }}</span>
+      @if (e.urgente) { <span class="badge text-bg-danger">Urgente: {{ e.motivoUrgencia }}</span> }
+      @if (e.novaIntimacao) { <span class="badge text-bg-info">Nova intimação</span> }
+    </div>
+    <h2 id="foco-titulo" class="titulo-pagina h3 mb-1">{{ e.etiqueta }}</h2>
+    <p class="mb-3" [class.restrito]="e.conteudoRestrito">{{ e.descricaoClasse }} · {{ e.assunto }}</p>
+
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <p class="d-flex flex-wrap gap-2 mb-2">
+          <app-selo-prazo [status]="e.statusPrazo" [dias]="e.diasRestantes" />
+          <app-selo-prioridade [prioridade]="e.prioridade" [pontos]="e.pontuacaoPrioridade" />
+        </p>
+        <p class="mb-1">Prazo: <strong>{{ dataBr(e.dataPrazo) }}</strong></p>
+        <p class="mb-1">Ação pendente: <strong>{{ e.acaoPendente }}</strong></p>
+        <p class="mb-0">Responsável: {{ e.nomeResponsavel }} · parado há {{ e.tempoParadoDias }} dia(s)</p>
+      </div>
+      <div class="col-12 col-md-6">
+        @if (detalhe()?.composicaoPrioridade; as c) {
+          <h3 class="h6">Por que está aqui</h3>
+          <ul class="mb-0 small">
+            @for (p of c.parcelas; track p.motivo) { <li>{{ p.motivo }}: {{ p.pontos > 0 ? '+' : '' }}{{ p.pontos }}</li> }
+          </ul>
+        }
+      </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <button type="button" class="btn btn-outline-secondary" [disabled]="indice() === 0" (click)="ir(-1)">← Anterior <span class="visually-hidden">(atalho P)</span></button>
+      @if (acao(); as a) {
+        <button type="button" class="btn btn-primary" (click)="executarAcao()">{{ rotuloAcao[a] }} <span class="visually-hidden">(atalho X)</span></button>
+      }
+      <a class="btn btn-outline-primary" [routerLink]="['/expedientes', e.idExpediente]">Abrir detalhe <span class="visually-hidden">(atalho A)</span></a>
+      <button type="button" class="btn btn-outline-secondary" [disabled]="indice() >= fila().length - 1" (click)="ir(1)">Próximo → <span class="visually-hidden">(atalho N)</span></button>
+    </div>
+  </section>
+  <app-dialogo-lote [selecionados]="selecionados()" (concluido)="aoConcluir($event)" />
+} @else {
+  <div class="cartao"><p class="mb-0">Fila vazia. Nada pendente com esses critérios.</p></div>
+}

@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Testes do backend ao salvar",
+      "trigger": "PostFileSave",
+      "description": "Roda typecheck e Vitest (regras RN1–RN7, lote, sigilo e API) quando um arquivo do backend é salvo.",
+      "matcher": "backend/(src|test)/.*\\.ts$",
+      "action": {
+        "type": "command",
+        "command": "cd backend && npx tsc --noEmit && npx vitest --run --reporter=dot",
+        "timeout": 120
+      }
+    }
+  ]
+}

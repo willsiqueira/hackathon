@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Revisão de sigilo e acesso",
+      "trigger": "PostFileSave",
+      "description": "Lembra as regras de segurança (RN6, escopo por setor, IAM) ao alterar código sensível.",
+      "matcher": "(backend/src/(dominio/acesso|api/autenticacao|api/handlers/.*|servicos/.*)|infra/lib/.*)\\.ts$",
+      "action": {
+        "type": "agent",
+        "prompt": "Um arquivo de autorização, handler, serviço ou infraestrutura foi alterado. Confira antes de seguir: (1) setor e perfil vêm das claims do Cognito e do cadastro, nunca da requisição; (2) toda consulta usa SETOR#<sigla> do usuário; (3) RN6: conteúdo de sigiloso só para MEMBRO, CHEFE ou o SERVIDOR responsável, e nunca em CSV, .ics, e-mail ou log; (4) entradas validadas com zod e limites de lote e página; (5) IAM sem ação ou recurso \"*\". Se algo quebrou, corrija e rode `cd backend && npx vitest --run`."
+      }
+    }
+  ]
+}

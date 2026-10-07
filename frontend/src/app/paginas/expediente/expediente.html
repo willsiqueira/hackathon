@@ -1,0 +1,202 @@
+<button type="button" class="btn btn-link px-0 mb-2" (click)="voltar()">← Voltar</button>
+
+@if (negado()) {
+  <div class="alert alert-warning" role="alert">
+    <h1 class="h5">Acesso negado</h1>
+    <p class="mb-0">{{ negado() }} Você só vê expedientes do seu setor.</p>
+  </div>
+} @else if (e(); as e) {
+  <div class="d-flex flex-wrap align-items-start gap-2 mb-3">
+    <div class="flex-grow-1">
+      <p class="mb-1 d-flex flex-wrap gap-2 align-items-center">
+        <app-selo-gerenciador [gerenciador]="e.gerenciador" />
+        <span class="badge text-bg-light border">{{ catalogo.descricao('CAIXA', e.caixa) }}</span>
+        @if (e.sigiloso) { <span class="badge text-bg-dark">Sigiloso (nível {{ e.nivelSigilo }})</span> }
+        @if (e.urgente) { <span class="badge text-bg-danger">Urgente: {{ e.motivoUrgencia }}</span> }
+      </p>
+      <h1 class="titulo-pagina h2 mb-1">{{ e.etiqueta }}</h1>
+      <p class="mb-0" [class.restrito]="e.conteudoRestrito">{{ e.numeroReferencia }} · {{ e.descricaoClasse }} · {{ e.assunto }}</p>
+    </div>
+    @if (acoesPossiveis().length) {
+      <div class="d-flex flex-wrap gap-2" role="group" aria-label="Ações deste expediente">
+        @for (a of acoesPossiveis(); track a) {
+          <button type="button" class="btn btn-sm btn-outline-primary" (click)="abrirAcao(a)">{{ rotuloAcao[a] }}</button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (e.conteudoRestrito) {
+    <div class="alert alert-warning" role="status">
+      Expediente sigiloso: como você não é o responsável, o assunto, o resumo, as anotações e as descrições do histórico ficam ocultos.
+    </div>
+  }
+
+  <div class="row g-3">
+    <!-- Prazo e prioridade (RF06, RF07, RF08) -->
+    <section class="col-12 col-lg-5" aria-labelledby="titulo-prioridade">
+      <div class="cartao h-100">
+        <h2 id="titulo-prioridade" class="h5">Prazo e prioridade</h2>
+        <p class="d-flex flex-wrap gap-2 mb-2">
+          <app-selo-prazo [status]="e.statusPrazo" [dias]="e.diasRestantes" />
+          <app-selo-prioridade [prioridade]="e.prioridade" [pontos]="e.pontuacaoPrioridade" />
+        </p>
+        <p class="small mb-2">Prazo {{ rotuloEnum(e.tipoPrazo).toLowerCase() }} em <strong>{{ dataBr(e.dataPrazo) }}</strong> · ação pendente: <strong>{{ e.acaoPendente }}</strong></p>
+        @if (detalhe()?.composicaoPrioridade; as c) {
+          <table class="table table-sm mb-2">
+            <caption>Por que esta prioridade</caption>
+            <thead><tr><th id="cp-motivo" scope="col">Motivo</th><th id="cp-pontos" scope="col" class="text-end">Pontos</th></tr></thead>
+            <tbody>
+              @for (p of c.parcelas; track p.motivo) {
+                <tr><td headers="cp-motivo">{{ p.motivo }}</td><td headers="cp-pontos" class="text-end">{{ p.pontos > 0 ? '+' : '' }}{{ p.pontos }}</td></tr>
+              }
+            </tbody>
+            <tfoot><tr><th scope="row" id="cp-total">Total</th><td headers="cp-pontos cp-total" class="text-end fw-semibold">{{ c.total }}</td></tr></tfoot>
+          </table>
+        }
+        <p class="small mb-0">
+          Risco de vencimento:
+          @if (e.risco !== null && e.risco !== undefined) {
+            <strong>{{ e.risco }}/100</strong> <span class="text-secondary">(parado há {{ e.tempoParadoDias }} dia(s), faltam {{ e.diasRestantes }})</span>
+          } @else {
+            <strong>não se aplica</strong> <span class="text-secondary">(prazo vencido)</span>
+          }
+        </p>
+      </div>
+    </section>
+
+    <!-- Dados -->
+    <section class="col-12 col-lg-7" aria-labelledby="titulo-dados">
+      <div class="cartao h-100">
+        <h2 id="titulo-dados" class="h5">Dados do expediente</h2>
+        <dl class="row small mb-0">
+          <dt class="col-sm-4">Situação</dt><dd class="col-sm-8">{{ catalogo.descricao('SITUACAO', e.situacao) }}</dd>
+          <dt class="col-sm-4">Responsável</dt><dd class="col-sm-8">{{ e.nomeResponsavel }} ({{ e.tipoResponsabilidade === 'DESIGNADO' ? 'designado' : 'titular' }})</dd>
+          <dt class="col-sm-4">Tema</dt><dd class="col-sm-8" [class.restrito]="e.conteudoRestrito">{{ e.tema }}</dd>
+          <dt class="col-sm-4">Origem</dt><dd class="col-sm-8" [class.restrito]="e.conteudoRestrito">{{ e.orgaoOrigem }} · {{ e.tipoEntrada }}</dd>
+          <dt class="col-sm-4">Chegada</dt><dd class="col-sm-8">{{ dataHoraBr(e.dataChegada) }} (há {{ e.diasNoSetor }} dia(s))</dd>
+          <dt class="col-sm-4">Recebimento</dt><dd class="col-sm-8">{{ dataHoraBr(e.dataRecebimento) }}</dd>
+          <dt class="col-sm-4">Última movimentação</dt><dd class="col-sm-8">{{ dataHoraBr(e.dataUltimaMovimentacao) }} (parado há {{ e.tempoParadoDias }} dia(s))</dd>
+          <dt class="col-sm-4">Minutas pendentes</dt><dd class="col-sm-8">{{ e.qtdMinutasPendentes ?? 0 }}</dd>
+          <dt class="col-sm-4">Marcadores</dt>
+          <dd class="col-sm-8">
+            @for (m of detalhe()?.marcadores ?? []; track m.idRotulo) {
+              <span class="selo selo-pequeno me-1" [style.border-color]="m.cor" style="background:#fff;color:#1f1e1d;border-width:2px">{{ m.descricao }}</span>
+            } @empty { — }
+          </dd>
+          <dt class="col-sm-4">Resumo</dt><dd class="col-sm-8" [class.restrito]="e.conteudoRestrito">{{ e.resumo }}</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Prazos -->
+    <section class="col-12 col-xl-6" aria-labelledby="titulo-prazos">
+      <div class="cartao h-100">
+        <h2 id="titulo-prazos" class="h5">Prazos</h2>
+        <div tabindex="0" class="table-responsive">
+          <table class="table table-sm mb-0">
+            <caption class="visually-hidden">Prazos do expediente, atual e anteriores</caption>
+            <thead><tr>
+              <th id="pz-inicio" scope="col">Início</th><th id="pz-fim" scope="col">Prazo</th><th id="pz-dias" scope="col" class="text-end">Dias</th>
+              <th id="pz-sit" scope="col">Situação</th><th id="pz-atraso" scope="col" class="text-end">Atraso</th>
+            </tr></thead>
+            <tbody>
+              @for (p of detalhe()?.prazos ?? []; track p.idPrazo) {
+                <tr>
+                  <td headers="pz-inicio">{{ dataBr(p.dataInicio) }}</td><td headers="pz-fim">{{ dataBr(p.dataPrazo) }}</td>
+                  <td headers="pz-dias" class="text-end">{{ p.duracaoDias }}</td><td headers="pz-sit">{{ rotuloEnum(p.situacao) }}</td>
+                  <td headers="pz-atraso" class="text-end">{{ p.diasAtraso || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Designações -->
+    <section class="col-12 col-xl-6" aria-labelledby="titulo-designacoes">
+      <div class="cartao h-100">
+        <h2 id="titulo-designacoes" class="h5">Designações</h2>
+        <div tabindex="0" class="table-responsive">
+          <table class="table table-sm mb-0">
+            <caption class="visually-hidden">Designações do expediente</caption>
+            <thead><tr>
+              <th id="dg-quem" scope="col">Designado</th><th id="dg-por" scope="col">Por</th><th id="dg-em" scope="col">Em</th>
+              <th id="dg-dev" scope="col">Devolução</th><th id="dg-sit" scope="col">Situação</th>
+            </tr></thead>
+            <tbody>
+              @for (d of detalhe()?.designacoes ?? []; track d.idDesignacao) {
+                <tr>
+                  <td headers="dg-quem">{{ d.nomeDesignado }}</td><td headers="dg-por">{{ d.nomeDesignador }}</td>
+                  <td headers="dg-em">{{ dataBr(d.dataDesignacao) }}</td><td headers="dg-dev">{{ dataBr(d.prazoDevolucao) }}</td>
+                  <td headers="dg-sit">{{ rotuloEnum(d.situacao) }} · {{ rotuloEnum(d.statusDevolucao).toLowerCase() }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5">Nenhuma designação.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Histórico (RF13) -->
+    <section class="col-12" aria-labelledby="titulo-historico">
+      <div class="cartao">
+        <div class="d-flex flex-wrap align-items-end gap-2 mb-2">
+          <h2 id="titulo-historico" class="h5 mb-0 me-auto">Histórico de movimentações</h2>
+          <form class="d-flex align-items-end gap-2" (ngSubmit)="aplicarFiltroHistorico()">
+            <div>
+              <label for="tipo-historico" class="form-label small mb-0">Tipo</label>
+              <select id="tipo-historico" name="tipoHistorico" class="form-select form-select-sm" [(ngModel)]="tipoHistorico">
+                <option value="">Todos</option>
+                @for (t of tiposHistorico(); track t) { <option [value]="t">{{ catalogo.descricao('TIPO_MOVIMENTACAO', t) }}</option> }
+              </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Filtrar</button>
+          </form>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="exportarHistorico()">Exportar CSV</button>
+        </div>
+        <div tabindex="0" class="table-responsive">
+          <table class="table table-sm mb-0">
+            <caption class="visually-hidden">Movimentações, da mais recente para a mais antiga</caption>
+            <thead><tr>
+              <th id="mv-quando" scope="col">Quando</th><th id="mv-tipo" scope="col">Tipo</th><th id="mv-quem" scope="col">Quem</th>
+              <th id="mv-de" scope="col">De</th><th id="mv-para" scope="col">Para</th><th id="mv-desc" scope="col">Descrição</th>
+            </tr></thead>
+            <tbody>
+              @for (m of movimentacoes(); track m.idMovimentacao) {
+                <tr>
+                  <td headers="mv-quando" class="text-nowrap">{{ dataHoraBr(m.dataHora) }}</td>
+                  <td headers="mv-tipo">{{ catalogo.descricao('TIPO_MOVIMENTACAO', m.tipoMovimentacao) }}</td>
+                  <td headers="mv-quem">{{ m.nomeUsuario }}</td><td headers="mv-de">{{ m.setorOrigem }}</td><td headers="mv-para">{{ m.setorDestino }}</td>
+                  <td headers="mv-desc" [class.restrito]="e.conteudoRestrito">{{ m.descricao }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6">Nenhuma movimentação deste tipo.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    @if ((detalhe()?.anotacoes ?? []).length) {
+      <section class="col-12" aria-labelledby="titulo-anotacoes">
+        <div class="cartao">
+          <h2 id="titulo-anotacoes" class="h5">Anotações</h2>
+          <ul class="list-unstyled mb-0">
+            @for (a of detalhe()!.anotacoes; track a.idAnotacao) {
+              <li class="py-2 border-bottom"><strong>{{ a.nomeUsuario }}</strong> <span class="small text-secondary">{{ dataHoraBr(a.dataHora) }}</span><div>{{ a.texto }}</div></li>
+            }
+          </ul>
+        </div>
+      </section>
+    }
+  </div>
+
+  <app-dialogo-lote [selecionados]="selecionados()" (concluido)="aoConcluir($event)" />
+} @else {
+  <p aria-busy="true">Carregando o expediente…</p>
+}

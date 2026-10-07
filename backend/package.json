@@ -1,0 +1,29 @@
+{
+  "name": "lex-gabinete-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API do painel de expedientes do gabinete (Lambda Node.js 22 e servidor local)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "tsx src/local/servidor.ts",
+    "test": "vitest --run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "3.1147.0",
+    "@aws-sdk/client-eventbridge": "3.1147.0",
+    "@aws-sdk/client-sesv2": "3.1147.0",
+    "@aws-sdk/lib-dynamodb": "3.1147.0",
+    "@types/aws-lambda": "8.10.164",
+    "@types/node": "22.19.1",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

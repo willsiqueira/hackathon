@@ -1,0 +1,347 @@
+<div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+  <div class="flex-grow-1">
+    <h1 class="titulo-pagina h2 mb-0">Expedientes do gabinete</h1>
+    <p class="text-secondary small mb-0">Judicial, Documento e Extrajudicial numa só lista, ordenada por prazo e prioridade.</p>
+  </div>
+  <button type="button" class="btn btn-outline-secondary btn-sm" (click)="exportar()">Exportar CSV</button>
+  <button type="button" class="btn btn-outline-secondary btn-sm" (click)="baixarIcs()">Prazos no calendário (.ics)</button>
+</div>
+
+<!-- Gerenciador (RF01) -->
+<nav aria-label="Gerenciador">
+  <ul class="nav nav-tabs mb-0">
+    @for (g of abas(); track g) {
+      <li class="nav-item">
+        <button type="button" class="nav-link" [class.active]="gerenciador() === g" [attr.aria-current]="gerenciador() === g ? 'true' : null" (click)="escolherGerenciador(g)">
+          {{ rotuloGerenciador(g) }}
+        </button>
+      </li>
+    }
+  </ul>
+</nav>
+
+<div class="cartao rounded-top-0 border-top-0 mb-3">
+  <!-- Caixas com contador (RF02) -->
+  <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Caixa">
+    @for (c of caixas; track c.codigo) {
+      <button type="button" class="btn btn-sm" [class.btn-primary]="caixa() === c.codigo" [class.btn-outline-primary]="caixa() !== c.codigo"
+        [attr.aria-pressed]="caixa() === c.codigo" (click)="escolherCaixa(c.codigo)">
+        {{ c.rotulo }} <span class="badge text-bg-light ms-1">{{ contadorCaixa(c.codigo) ?? '…' }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- Busca e filtros (RF03) -->
+  <form class="row g-2 align-items-end" role="search" (ngSubmit)="pesquisar()">
+    <div class="col-12 col-md-5">
+      <label for="busca" class="form-label small mb-1">Pesquisar</label>
+      <input id="busca" name="busca" type="search" class="form-control" [(ngModel)]="busca" maxlength="200"
+        placeholder="Etiqueta, número, assunto, classe ou responsável">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Pesquisar</button>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-outline-primary" (click)="mostrarFiltros.set(!mostrarFiltros())" [attr.aria-expanded]="mostrarFiltros()" aria-controls="filtros-avancados">
+        Filtros avançados @if (qtdFiltros()) { <span class="badge text-bg-primary">{{ qtdFiltros() }}</span> }
+      </button>
+    </div>
+    <div class="col-12 col-md">
+      <label for="filtro-salvo" class="form-label small mb-1">Filtros salvos</label>
+      <div class="input-group">
+        <select id="filtro-salvo" name="filtroSalvo" class="form-select" [(ngModel)]="filtroEscolhido" (change)="escolherFiltroSalvo()">
+          <option value="">Escolha um filtro</option>
+          @if (filtrosSalvos().meus.length) {
+            <optgroup label="Meus filtros">
+              @for (f of filtrosSalvos().meus; track f.idFiltro) { <option [value]="f.idFiltro">{{ f.nome }}{{ f.padrao ? ' (padrão)' : '' }}</option> }
+            </optgroup>
+          }
+          @if (filtrosSalvos().compartilhados.length) {
+            <optgroup label="Compartilhados pelo setor">
+              @for (f of filtrosSalvos().compartilhados; track f.idFiltro) { <option [value]="f.idFiltro">{{ f.nome }} · {{ f.nomeAutor }}</option> }
+            </optgroup>
+          }
+        </select>
+        @if (ehMeuFiltro()) {
+          <button type="button" class="btn btn-outline-danger" (click)="excluirFiltro()">Excluir</button>
+        }
+        <button type="button" class="btn btn-outline-secondary" (click)="mostrarSalvar.set(!mostrarSalvar())" [attr.aria-expanded]="mostrarSalvar()" aria-controls="salvar-filtro">Salvar atual</button>
+      </div>
+    </div>
+  </form>
+
+  @if (mostrarSalvar()) {
+    <form id="salvar-filtro" class="row g-2 align-items-end mt-2 p-2 bg-light rounded" (ngSubmit)="salvarFiltro()">
+      <div class="col-12 col-md-5">
+        <label for="nome-filtro" class="form-label small mb-1">Nome do filtro</label>
+        <input id="nome-filtro" name="nomeFiltro" class="form-control" [(ngModel)]="novoFiltro.nome" maxlength="80" required>
+      </div>
+      <div class="col-auto form-check ms-2">
+        <input id="filtro-padrao" name="filtroPadrao" type="checkbox" class="form-check-input" [(ngModel)]="novoFiltro.padrao">
+        <label for="filtro-padrao" class="form-check-label">Usar como padrão</label>
+      </div>
+      <div class="col-auto form-check ms-2">
+        <input id="filtro-compartilhado" name="filtroCompartilhado" type="checkbox" class="form-check-input" [(ngModel)]="novoFiltro.compartilhadoComSetor">
+        <label for="filtro-compartilhado" class="form-check-label">Compartilhar com o setor</label>
+      </div>
+      <div class="col-auto"><button type="submit" class="btn btn-primary btn-sm">Salvar filtro</button></div>
+    </form>
+  }
+
+  @if (mostrarFiltros()) {
+    <form id="filtros-avancados" class="mt-3 pt-3 border-top" (ngSubmit)="aplicarFiltros()">
+      <div class="row g-3">
+        <fieldset class="col-12 col-lg-6">
+          <legend class="form-label small fw-semibold mb-1">Situação do prazo</legend>
+          @for (s of catalogo.itens('STATUS_PRAZO').slice(0, 5); track s.codigo) {
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" [id]="'sp-' + s.codigo" [checked]="filtros.statusPrazo.includes(s.codigo)" (change)="alternarLista(filtros.statusPrazo, s.codigo)">
+              <label class="form-check-label" [for]="'sp-' + s.codigo">{{ s.descricao }}</label>
+            </div>
+          }
+        </fieldset>
+        <fieldset class="col-12 col-lg-6">
+          <legend class="form-label small fw-semibold mb-1">Prioridade</legend>
+          @for (p of catalogo.itens('PRIORIDADE'); track p.codigo) {
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" [id]="'pr-' + p.codigo" [checked]="filtros.prioridade.includes(p.codigo)" (change)="alternarLista(filtros.prioridade, p.codigo)">
+              <label class="form-check-label" [for]="'pr-' + p.codigo">{{ p.descricao }}</label>
+            </div>
+          }
+        </fieldset>
+
+        <div class="col-12 col-md-6 col-xl-3">
+          <label for="f-responsavel" class="form-label small mb-1">Responsável</label>
+          <select id="f-responsavel" name="responsavel" class="form-select form-select-sm" [(ngModel)]="filtros.idResponsavel">
+            <option value="">Qualquer</option>
+            @for (p of pessoas(); track p.idUsuario) { <option [value]="p.idUsuario">{{ p.nome }}</option> }
+          </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <label for="f-assunto" class="form-label small mb-1">Assunto</label>
+          <select id="f-assunto" name="assunto" class="form-select form-select-sm" [(ngModel)]="filtros.assunto">
+            <option value="">Qualquer</option>
+            @for (a of assuntos(); track a) { <option [value]="a">{{ a }}</option> }
+          </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <label for="f-classe" class="form-label small mb-1">Classe</label>
+          <select id="f-classe" name="classe" class="form-select form-select-sm" [(ngModel)]="filtros.classe">
+            <option value="">Qualquer</option>
+            @for (c of classes(); track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <label for="f-tema" class="form-label small mb-1">Tema</label>
+          <select id="f-tema" name="tema" class="form-select form-select-sm" [(ngModel)]="filtros.tema">
+            <option value="">Qualquer</option>
+            @for (t of temas(); track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <label for="f-situacao" class="form-label small mb-1">Situação</label>
+          <select id="f-situacao" name="situacao" class="form-select form-select-sm" [(ngModel)]="filtros.situacao">
+            <option value="">Qualquer</option>
+            @for (s of catalogo.itens('SITUACAO'); track s.codigo) { <option [value]="s.codigo">{{ s.descricao }}</option> }
+          </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <label for="f-marcador" class="form-label small mb-1">Marcador</label>
+          <select id="f-marcador" name="marcador" class="form-select form-select-sm" [(ngModel)]="filtros.marcador">
+            <option value="">Qualquer</option>
+            @for (m of marcadoresDisponiveis(); track m) { <option [value]="m">{{ m }}</option> }
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <label for="f-parado" class="form-label small mb-1">Parado há pelo menos (dias)</label>
+          <input id="f-parado" name="parado" type="number" min="0" max="999" class="form-control form-control-sm" [(ngModel)]="filtros.tempoParadoMin">
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <label for="f-risco" class="form-label small mb-1">Risco mínimo (0–100)</label>
+          <input id="f-risco" name="risco" type="number" min="0" max="100" class="form-control form-control-sm" [(ngModel)]="filtros.riscoMin">
+        </div>
+
+        <fieldset class="col-12 col-md-6">
+          <legend class="form-label small fw-semibold mb-1">Chegada</legend>
+          <div class="d-flex gap-2">
+            <div><label for="f-chegada-de" class="form-label small mb-0">De</label>
+              <input id="f-chegada-de" name="chegadaDe" type="date" class="form-control form-control-sm" [(ngModel)]="filtros.chegadaDe"></div>
+            <div><label for="f-chegada-ate" class="form-label small mb-0">Até</label>
+              <input id="f-chegada-ate" name="chegadaAte" type="date" class="form-control form-control-sm" [(ngModel)]="filtros.chegadaAte"></div>
+          </div>
+        </fieldset>
+        <fieldset class="col-12 col-md-6">
+          <legend class="form-label small fw-semibold mb-1">Prazo</legend>
+          <div class="d-flex gap-2">
+            <div><label for="f-prazo-de" class="form-label small mb-0">De</label>
+              <input id="f-prazo-de" name="prazoDe" type="date" class="form-control form-control-sm" [(ngModel)]="filtros.prazoDe"></div>
+            <div><label for="f-prazo-ate" class="form-label small mb-0">Até</label>
+              <input id="f-prazo-ate" name="prazoAte" type="date" class="form-control form-control-sm" [(ngModel)]="filtros.prazoAte"></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="col-12">
+          <legend class="form-label small fw-semibold mb-1">Sinalizações</legend>
+          @for (s of sinalizacoes; track s[0]) {
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" [id]="'sn-' + s[0]" [name]="'sn-' + s[0]" [(ngModel)]="filtros[s[0]]">
+              <label class="form-check-label" [for]="'sn-' + s[0]">{{ s[1] }}</label>
+            </div>
+          }
+        </fieldset>
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary btn-sm">Aplicar filtros</button>
+        <button type="button" class="btn btn-link btn-sm" (click)="limparFiltros()">Limpar tudo</button>
+      </div>
+    </form>
+  }
+</div>
+
+<!-- Barra da lista: ordenação, colunas, lote -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+  <h2 id="titulo-lista" class="h5 mb-0 me-auto" tabindex="-1">
+    {{ resposta()?.total ?? '…' }} expediente(s)
+    @if (carregando()) { <span class="spinner-border spinner-border-sm ms-1" aria-hidden="true"></span><span class="visually-hidden">Carregando</span> }
+  </h2>
+  <label for="ordenacao" class="small">Ordenar por</label>
+  <select id="ordenacao" class="form-select form-select-sm w-auto" [ngModel]="ordenacao()" (ngModelChange)="mudarOrdenacao($event)">
+    <option value="fila">Fila: prazo e prioridade</option>
+    <option value="pontuacaoPrioridade:desc">Maior prioridade</option>
+    <option value="risco:desc">Maior risco de vencimento</option>
+    <option value="tempoParadoDias:desc">Mais tempo parado</option>
+    <option value="dataChegada:desc">Chegada mais recente</option>
+    @if (!['fila', 'pontuacaoPrioridade:desc', 'risco:desc', 'tempoParadoDias:desc', 'dataChegada:desc'].includes(ordenacao())) {
+      <option [value]="ordenacao()">Coluna escolhida</option>
+    }
+  </select>
+  <button type="button" class="btn btn-outline-secondary btn-sm" (click)="mostrarColunas.set(!mostrarColunas())" [attr.aria-expanded]="mostrarColunas()" aria-controls="config-colunas">Colunas e exibição</button>
+</div>
+
+@if (mostrarColunas()) {
+  <section id="config-colunas" class="cartao mb-3" aria-labelledby="titulo-colunas">
+    <h3 id="titulo-colunas" class="h6">Colunas visíveis e ordem</h3>
+    <ul class="list-unstyled row row-cols-1 row-cols-md-2 row-cols-xl-3 g-1 mb-3">
+      @for (c of todasColunas; track c.campo) {
+        <li class="col d-flex align-items-center gap-1">
+          <div class="form-check flex-grow-1 mb-0">
+            <input class="form-check-input" type="checkbox" [id]="'col-vis-' + c.campo" [checked]="colunasVisiveis().includes(c.campo)"
+              [disabled]="c.campo === 'etiqueta'" (change)="alternarColuna(c.campo)">
+            <label class="form-check-label" [for]="'col-vis-' + c.campo">{{ c.titulo }}</label>
+          </div>
+          @if (colunasVisiveis().includes(c.campo) && c.campo !== 'etiqueta') {
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0" (click)="moverColuna(c.campo, -1)">←<span class="visually-hidden"> Mover {{ c.titulo }} para a esquerda</span></button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0" (click)="moverColuna(c.campo, 1)">→<span class="visually-hidden"> Mover {{ c.titulo }} para a direita</span></button>
+          }
+        </li>
+      }
+    </ul>
+    <div class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label for="itens-pagina" class="form-label small mb-1">Itens por página</label>
+        <select id="itens-pagina" class="form-select form-select-sm" [ngModel]="tamanho()" (ngModelChange)="mudarTamanho($event)">
+          @for (n of [10, 25, 50, 100]; track n) { <option [ngValue]="n">{{ n }}</option> }
+        </select>
+      </div>
+      <div class="col-auto">
+        <label for="densidade" class="form-label small mb-1">Densidade</label>
+        <select id="densidade" class="form-select form-select-sm" [ngModel]="densidade()" (ngModelChange)="densidade.set($event)">
+          <option value="CONFORTAVEL">Confortável</option>
+          <option value="COMPACTA">Compacta</option>
+        </select>
+      </div>
+      <div class="col-auto"><button type="button" class="btn btn-primary btn-sm" (click)="salvarVisao()">Salvar minha visão</button></div>
+    </div>
+  </section>
+}
+
+<!-- Ações em lote (RF11) -->
+<div id="acoes-lote" tabindex="-1" class="d-flex flex-wrap align-items-center gap-2 mb-2 p-2 rounded" [class.bg-white]="listaSelecionados().length" [class.border]="listaSelecionados().length">
+  @if (listaSelecionados().length) {
+    <span class="fw-semibold">{{ listaSelecionados().length }} selecionado(s):</span>
+    @for (a of acoes(); track a) {
+      <button type="button" class="btn btn-sm" [class.btn-primary]="a === 'RECEBER' || a === 'DESIGNAR'" [class.btn-outline-primary]="a !== 'RECEBER' && a !== 'DESIGNAR'" (click)="abrirLote(a)">{{ rotuloAcao[a] }}</button>
+    }
+    <button type="button" class="btn btn-sm btn-link" (click)="limparSelecao()">Limpar seleção</button>
+  } @else {
+    <span class="small text-secondary">Marque expedientes na lista para receber, designar, arquivar e outras ações em lote.</span>
+  }
+</div>
+
+<div tabindex="0" class="table-responsive bg-white border rounded">
+  <table class="table table-hover tabela-expedientes mb-0" [class.compacta]="densidade() === 'COMPACTA'" [attr.aria-busy]="carregando()">
+    <caption class="px-3">
+      Expedientes {{ gerenciadorAtual() ? 'do gerenciador ' + rotuloGerenciador(gerenciador()) : 'de todos os gerenciadores' }},
+      página {{ pagina() }} de {{ totalPaginas() }}. Selos de prazo e prioridade trazem o texto da situação.
+    </caption>
+    <thead class="table-light">
+      <tr>
+        <th id="col-sel" scope="col">
+          <input type="checkbox" class="form-check-input" id="marcar-pagina" [checked]="todosDaPaginaMarcados()" (change)="alternarPagina()">
+          <label for="marcar-pagina" class="visually-hidden">Selecionar todos desta página</label>
+        </th>
+        @for (c of colunas(); track c.campo) {
+          <th [id]="'col-' + c.campo" scope="col" [class.d-none]="c.secundaria" [class.d-lg-table-cell]="c.secundaria" [attr.aria-sort]="ariaSort(c.campo)">
+            @if (c.ordenavel) {
+              <button type="button" class="btn-ordenar" (click)="ordenarPor(c.campo)">
+                {{ c.titulo }}
+                <span aria-hidden="true">{{ ariaSort(c.campo) === 'ascending' ? '▲' : ariaSort(c.campo) === 'descending' ? '▼' : '' }}</span>
+                <span class="visually-hidden">, ordenar</span>
+              </button>
+            } @else {
+              {{ c.titulo }}
+            }
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (e of resposta()?.itens ?? []; track e.idExpediente) {
+        <tr [class.selecionada]="selecionados().has(e.idExpediente)">
+          <td headers="col-sel">
+            <input type="checkbox" class="form-check-input" [id]="'sel-' + e.idExpediente" [checked]="selecionados().has(e.idExpediente)" (change)="alternarSelecao(e)">
+            <label [for]="'sel-' + e.idExpediente" class="visually-hidden">Selecionar {{ e.etiqueta }}</label>
+          </td>
+          @for (c of colunas(); track c.campo) {
+            @if (c.campo === 'etiqueta') {
+              <th scope="row" [id]="'lin-' + e.idExpediente" headers="col-etiqueta" class="fw-normal">
+                <a [routerLink]="['/expedientes', e.idExpediente]" class="fw-semibold">{{ e.etiqueta }}</a>
+                @if (e.urgente) { <span class="badge text-bg-danger ms-1">Urgente<span class="visually-hidden">: {{ e.motivoUrgencia }}</span></span> }
+                @if (e.novaIntimacao) { <span class="badge text-bg-info ms-1">Nova intimação</span> }
+                @if (e.sigiloso) { <span class="badge text-bg-dark ms-1">Sigiloso</span> }
+                @if (e.novo) { <span class="badge text-bg-success ms-1">Novo</span> }
+              </th>
+            } @else {
+              <td [attr.headers]="'col-' + c.campo + ' lin-' + e.idExpediente" [class.d-none]="c.secundaria" [class.d-lg-table-cell]="c.secundaria">
+                @switch (c.campo) {
+                  @case ('statusPrazo') { <app-selo-prazo [status]="e.statusPrazo" [dias]="e.diasRestantes" /> }
+                  @case ('prioridade') { <app-selo-prioridade [prioridade]="e.prioridade" [pontos]="e.pontuacaoPrioridade" /> }
+                  @case ('gerenciador') { <app-selo-gerenciador [gerenciador]="e.gerenciador" /> }
+                  @case ('assunto') { <span [class.restrito]="e.conteudoRestrito">{{ e.assunto }}</span> }
+                  @case ('risco') { {{ e.risco ?? (e.statusPrazo === 'VENCIDO' ? 'vencido' : '—') }} }
+                  @default { {{ valor(e, c.campo) }} }
+                }
+              </td>
+            }
+          }
+        </tr>
+      } @empty {
+        @if (!carregando()) {
+          <tr><td [attr.colspan]="colunas().length + 1" class="text-center py-4">Nenhum expediente com esses filtros.</td></tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+
+<nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2" aria-label="Paginação">
+  <span class="small">Página {{ pagina() }} de {{ totalPaginas() }}</span>
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item" [class.disabled]="pagina() === 1"><button type="button" class="page-link" [disabled]="pagina() === 1" (click)="irPara(1)">Primeira</button></li>
+    <li class="page-item" [class.disabled]="pagina() === 1"><button type="button" class="page-link" [disabled]="pagina() === 1" (click)="irPara(pagina() - 1)">Anterior</button></li>
+    <li class="page-item" [class.disabled]="pagina() === totalPaginas()"><button type="button" class="page-link" [disabled]="pagina() === totalPaginas()" (click)="irPara(pagina() + 1)">Próxima</button></li>
+    <li class="page-item" [class.disabled]="pagina() === totalPaginas()"><button type="button" class="page-link" [disabled]="pagina() === totalPaginas()" (click)="irPara(totalPaginas())">Última</button></li>
+  </ul>
+</nav>
+
+<app-dialogo-lote [selecionados]="listaSelecionados()" (concluido)="aoConcluirLote($event)" />

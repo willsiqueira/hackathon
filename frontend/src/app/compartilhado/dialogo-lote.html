@@ -1,0 +1,158 @@
+<dialog #dialogo class="dialogo-lote p-0 border-0 rounded-3 shadow" aria-labelledby="titulo-lote" (close)="aoFechar()">
+  <div class="p-3 p-md-4">
+    <div class="d-flex align-items-start gap-2 mb-3">
+      <h2 id="titulo-lote" class="h5 mb-0 flex-grow-1">{{ titulo() }}</h2>
+      <button type="button" class="btn-close" aria-label="Fechar" (click)="fechar()"></button>
+    </div>
+
+    @if (erro()) {
+      <div class="alert alert-danger" role="alert">{{ erro() }}</div>
+    }
+
+    @switch (etapa()) {
+      @case ('parametros') {
+        <form (ngSubmit)="verPrevia()" novalidate>
+          @switch (tipo()) {
+            @case ('DESIGNAR') {
+              <fieldset class="mb-3">
+                <legend class="h6">Para quem designar</legend>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="modo" id="modo-sugerido" value="sugerido" [(ngModel)]="modoDesignacao">
+                  <label class="form-check-label" for="modo-sugerido">
+                    Sugestão pela carga: <strong>{{ sugerido()?.nome ?? '—' }}</strong>
+                    @if (sugerido(); as s) { <span class="small">(índice {{ s.indice }})</span> }
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="modo" id="modo-distribuir" value="distribuir" [(ngModel)]="modoDesignacao">
+                  <label class="form-check-label" for="modo-distribuir">Distribuir de forma equilibrada entre a equipe</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="modo" id="modo-pessoa" value="pessoa" [(ngModel)]="modoDesignacao">
+                  <label class="form-check-label" for="modo-pessoa">Escolher a pessoa</label>
+                </div>
+                @if (modoDesignacao === 'pessoa') {
+                  <label for="pessoa" class="form-label mt-2">Pessoa</label>
+                  <select id="pessoa" name="pessoa" class="form-select" [(ngModel)]="idUsuarioDesignado" required>
+                    <option value="" disabled>Selecione</option>
+                    @for (p of pessoas(); track p.idUsuario) {
+                      <option [value]="p.idUsuario">{{ p.nome }} ({{ p.cargo }})</option>
+                    }
+                  </select>
+                }
+              </fieldset>
+              <div class="mb-3">
+                <label for="prazo-devolucao" class="form-label">Prazo de devolução</label>
+                <input id="prazo-devolucao" name="prazoDevolucao" type="date" class="form-control" [(ngModel)]="prazoDevolucao" aria-describedby="ajuda-prazo">
+                <div id="ajuda-prazo" class="form-text">Em branco: 5 dias a partir de hoje.</div>
+              </div>
+              @if (cargas().length) {
+                <div tabindex="0" class="table-responsive mb-3">
+                  <table class="table table-sm mb-0">
+                    <caption>Carga atual da equipe (menor índice = mais disponível)</caption>
+                    <thead>
+                      <tr>
+                        <th id="cg-nome" scope="col">Pessoa</th>
+                        <th id="cg-ativas" scope="col" class="text-end">Designações ativas</th>
+                        <th id="cg-vencidas" scope="col" class="text-end">Devoluções vencidas</th>
+                        <th id="cg-acoes" scope="col" class="text-end">Ações em 30 dias</th>
+                        <th id="cg-indice" scope="col" class="text-end">Índice</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (c of cargas(); track c.idUsuario) {
+                        <tr>
+                          <td headers="cg-nome">{{ c.nome }}</td>
+                          <td headers="cg-ativas" class="text-end">{{ c.designacoesAtivas }}</td>
+                          <td headers="cg-vencidas" class="text-end">{{ c.devolucoesVencidas }}</td>
+                          <td headers="cg-acoes" class="text-end">{{ c.acoes30dias }}</td>
+                          <td headers="cg-indice" class="text-end">{{ c.indice }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            }
+            @case ('INCLUIR_MARCADOR') {
+              <div class="mb-3">
+                <label for="marcador" class="form-label">Marcador</label>
+                <select id="marcador" name="marcador" class="form-select" [(ngModel)]="idRotulo" required>
+                  @for (m of marcadoresAplicaveis(); track m.idRotulo) {
+                    <option [value]="m.idRotulo">{{ m.descricao }} ({{ m.gerenciador.toLowerCase() }})</option>
+                  }
+                </select>
+              </div>
+            }
+            @case ('MOVIMENTAR') {
+              <div class="mb-3">
+                <label for="destino" class="form-label">Setor de destino</label>
+                <input id="destino" name="destino" class="form-control" [(ngModel)]="setorDestino" required maxlength="60" placeholder="Ex.: SECAD/PGR">
+              </div>
+            }
+            @case ('ARQUIVAR') {
+              <div class="mb-3">
+                <label for="motivo" class="form-label">Motivo (opcional)</label>
+                <input id="motivo" name="motivo" class="form-control" [(ngModel)]="motivo" maxlength="200">
+              </div>
+            }
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="ocupado()">{{ ocupado() ? 'Calculando…' : 'Ver prévia' }}</button>
+          <button type="button" class="btn btn-link" (click)="fechar()">Cancelar</button>
+        </form>
+      }
+
+      @case ('previa') {
+        @if (previa(); as p) {
+          <h3 id="titulo-previa" class="h6" tabindex="-1">Prévia: {{ p.aplicaveis.length }} serão alterados, {{ p.ignorados.length }} ignorados</h3>
+          @if (p.aplicaveis.length) {
+            <div tabindex="0" class="table-responsive mb-3" style="max-height: 14rem">
+              <table class="table table-sm mb-0">
+                <caption>Serão alterados</caption>
+                <thead><tr><th id="pv-etq" scope="col">Expediente</th><th id="pv-mud" scope="col">Mudança</th></tr></thead>
+                <tbody>
+                  @for (i of p.aplicaveis; track i.idExpediente) {
+                    <tr><td headers="pv-etq">{{ i.etiqueta }}</td><td headers="pv-mud">{{ i.mudanca }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          @if (p.ignorados.length) {
+            <div tabindex="0" class="table-responsive mb-3" style="max-height: 14rem">
+              <table class="table table-sm mb-0">
+                <caption>Serão ignorados, com o motivo</caption>
+                <thead><tr><th id="pi-etq" scope="col">Expediente</th><th id="pi-mot" scope="col">Motivo</th></tr></thead>
+                <tbody>
+                  @for (i of p.ignorados; track i.idExpediente) {
+                    <tr><td headers="pi-etq">{{ i.etiqueta ?? i.idExpediente }}</td><td headers="pi-mot">{{ i.motivo }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <button type="button" class="btn btn-primary" [disabled]="ocupado() || !p.aplicaveis.length" (click)="confirmar()">
+            {{ ocupado() ? 'Executando…' : 'Confirmar ' + rotuloAcao[tipo()].toLowerCase() + ' (' + p.aplicaveis.length + ')' }}
+          </button>
+          @if (tipo() !== 'RECEBER' && tipo() !== 'DAR_CIENCIA' && tipo() !== 'ASSINAR') {
+            <button type="button" class="btn btn-outline-secondary ms-2" (click)="etapa.set('parametros')">Voltar</button>
+          }
+          <button type="button" class="btn btn-link" (click)="fechar()">Cancelar</button>
+        }
+      }
+
+      @case ('resultado') {
+        @if (resultado(); as r) {
+          <h3 id="titulo-resultado" class="h6" tabindex="-1">Concluído: {{ r.aplicados.length }} alterado(s), {{ r.ignorados.length }} ignorado(s)</h3>
+          <p class="small">Lote {{ r.idLote }} registrado na trilha de lotes.</p>
+          @if (desfeito()) {
+            <div class="alert alert-info" role="status">{{ desfeito() }}</div>
+          } @else {
+            <button type="button" class="btn btn-outline-danger me-2" [disabled]="ocupado()" (click)="desfazer()">Desfazer este lote</button>
+          }
+          <button type="button" class="btn btn-primary" (click)="fechar()">Fechar</button>
+        }
+      }
+    }
+  </div>
+</dialog>
