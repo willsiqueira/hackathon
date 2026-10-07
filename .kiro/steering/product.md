@@ -5,9 +5,9 @@ inclusion: always
 # Product: Painel unificado de expedientes (Único) - Hackathon MPF & AWS 2026
 
 Sources of truth (read them before writing specs):
-- #[[file:docs/instrucoes-hackathon.md]]
-- #[[file:docs/caso-de-uso-hackathon.md]]
-- Data dictionary: docs/README.md and docs/seed/gerar_seed.py
+- #[[file:docs/hackathon-expedientes/instrucoes-hackathon.md]]
+- #[[file:docs/hackathon-expedientes/caso-de-uso-hackathon.md]]
+- Data dictionary: docs/hackathon-expedientes/README.md and docs/hackathon-expedientes/seed/gerar_seed.py
 
 ## Language
 - All UI text, specs (requirements/design/tasks) and user-facing messages in Brazilian Portuguese (pt-BR).

@@ -7,6 +7,7 @@ cdk.out/
 *.tsbuildinfo
 __pycache__/
 .venv/
+.playwright-mcp/
 
 # Secrets and local config (never commit AWS credentials)
 .env

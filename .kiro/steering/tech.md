@@ -16,7 +16,7 @@ inclusion: always
 - Region: us-east-1 (event account). Always pass `--region us-east-1` or set it in CDK `env`.
 - Frontend: S3 (private, OAC) + CloudFront, HTTPS only.
 - API: API Gateway (REST) + Lambda, Cognito User Pool Authorizer on every route. No anonymous endpoints.
-- Data: DynamoDB single table `Expedientes` (PK/SK, GSI1, GSI2) exactly as in docs/instrucoes-hackathon.md. On-demand billing, PITR on.
+- Data: DynamoDB single table `Expedientes` (PK/SK, GSI1, GSI2) exactly as in docs/hackathon-expedientes/instrucoes-hackathon.md. On-demand billing, PITR on.
 - Alerts (optional): EventBridge Scheduler + Lambda + SES daily digest.
 - IaC: everything through CDK. Use `npx aws-cdk@2` (no global install). Run `cdk synth` before every `cdk deploy`.
 - Least-privilege IAM: grant Lambdas only the table/index actions they use (`table.grantReadData`, etc.).
@@ -41,6 +41,6 @@ inclusion: always
 
 ## Local environment notes (Windows + pwsh)
 - An antivirus intercepts TLS. Root CAs are exported to `%USERPROFILE%\.certs\windows-roots.pem` and wired through `NODE_EXTRA_CA_CERTS`, `AWS_CA_BUNDLE`, `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `UV_SYSTEM_CERTS`, and npm `cafile`. If a tool fails with a certificate error, point it at that bundle.
-- Python is provided by uv (`uv run`, `uvx`). Seed load: `uv run --no-project --with boto3 python ../docs/seed/gerar_seed.py --carregar --criar-tabela --tabela Expedientes --regiao us-east-1`.
+- Python is provided by uv (`uv run`, `uvx`). Seed load: `uv run --no-project --with boto3 python docs/hackathon-expedientes/seed/gerar_seed.py --carregar --criar-tabela --tabela Expedientes --regiao us-east-1`.
 - Docker is not installed: prefer CDK `NodejsFunction` with local esbuild bundling (add `esbuild` as a devDependency).
 - AWS credentials: event account 698271685662 (role WSParticipantRole) lives in the `hackathon` profile in `~/.aws/credentials`. `AWS_PROFILE=hackathon` is set at user level. Always deploy with `--profile hackathon`. The `default` profile is a different account (552149258862) and must not be used. The credentials are temporary STS keys: on `ExpiredToken`, ask the user for new ones. Never write keys into the repo.

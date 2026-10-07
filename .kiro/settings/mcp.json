@@ -1,10 +1,12 @@
 {
   "mcpServers": {
     "aws-mcp": {
-      "command": "uvx",
+      "command": "C:\\Users\\Abraão Pessoa\\AppData\\Local\\Microsoft\\WinGet\\Links\\uvx.exe",
       "args": [
         "mcp-proxy-for-aws@1.7.0",
         "https://aws-mcp.us-east-1.api.aws/mcp",
+        "--profile",
+        "hackathon",
         "--region",
         "us-east-1",
         "--metadata",
@@ -13,7 +15,10 @@
         "ERROR"
       ],
       "env": {
+        "AWS_PROFILE": "hackathon",
+        "AWS_REGION": "us-east-1",
         "UV_SYSTEM_CERTS": "1",
+        "SSL_CERT_FILE": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem",
         "AWS_CA_BUNDLE": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem"
       },
       "timeout": 100000,
@@ -24,17 +29,19 @@
       ]
     },
     "awslabs.dynamodb-mcp-server": {
-      "command": "uvx",
+      "command": "C:\\Users\\Abraão Pessoa\\AppData\\Local\\Microsoft\\WinGet\\Links\\uvx.exe",
       "args": ["awslabs.dynamodb-mcp-server@2.1.8"],
       "env": {
+        "AWS_PROFILE": "hackathon",
         "AWS_REGION": "us-east-1",
         "FASTMCP_LOG_LEVEL": "ERROR",
         "UV_SYSTEM_CERTS": "1",
+        "SSL_CERT_FILE": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem",
         "AWS_CA_BUNDLE": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem"
       }
     },
     "playwright": {
-      "command": "npx",
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
       "args": ["-y", "@playwright/mcp@0.0.83"],
       "env": {
         "NODE_EXTRA_CA_CERTS": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem"
