@@ -14,6 +14,11 @@ Protótipos visuais estáticos (HTML, sem API e sem RN6; a IA da opção 2 é si
 
 ## Arquitetura
 
+![Arquitetura na AWS: CloudFront, S3, Cognito, API Gateway, Lambda, DynamoDB, EventBridge, Scheduler, SQS e SES](docs/arquitetura/arquitetura-aws.png)
+
+Diagrama gerado a partir de código por [`docs/arquitetura/gerar_diagrama.py`](docs/arquitetura/gerar_diagrama.py)
+(biblioteca `diagrams` + Graphviz). Versão em texto:
+
 ```mermaid
 flowchart LR
   U[Navegador<br/>Angular + Bootstrap] -->|HTTPS| CF[CloudFront<br/>CSP, HSTS]

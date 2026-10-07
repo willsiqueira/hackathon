@@ -27,7 +27,8 @@ Tudo é serverless e está em código (AWS CDK v2, TypeScript), sem nada criado 
 - **API:** API Gateway REST com autorizador Cognito → Lambda Node.js 22.
 - **Dados:** DynamoDB em tabela única (`Expedientes`, GSI1 e GSI2), sob demanda e com PITR.
 - **Eventos:** EventBridge (designar → notificação, com DLQ). EventBridge Scheduler + SES para o resumo diário.
-- O diagrama está no `README.md`.
+- Diagrama com ícones AWS para o slide: [`docs/arquitetura/arquitetura-aws.png`](arquitetura/arquitetura-aws.png).
+  Também aparece no `README.md`.
 
 ### Segurança
 
