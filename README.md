@@ -7,6 +7,17 @@ caixas e contadores próprios. Para saber o que vence hoje e o que é urgente, a
 prioridade de cabeça. Este MVP junta tudo numa lista ordenada por prazo e prioridade, explica por que cada processo
 está no topo, permite agir em lote e abre o dia com uma tela inicial de contadores e alertas.
 
+## Acesse a aplicação
+
+<p>
+  <a href="https://d3ruzott08qnzm.cloudfront.net">
+    <img src="docs/qrcode-app.svg" width="200" height="200" alt="QR code que abre https://d3ruzott08qnzm.cloudfront.net">
+  </a>
+</p>
+
+Aponte a câmera do celular para o QR code ou abra <https://d3ruzott08qnzm.cloudfront.net>. O acesso exige login com um
+dos usuários fictícios de demonstração (peça a senha à equipe).
+
 Kit do caso (requisitos, dicionário de dados e seed): [`docs/hackathon-expedientes/`](docs/hackathon-expedientes/).
 Spec do Kiro: [`.kiro/specs/painel-expedientes/`](.kiro/specs/painel-expedientes/) (requisitos, design e tarefas).
 Protótipos visuais estáticos (HTML, sem API e sem RN6; a IA da opção 2 é simulada):

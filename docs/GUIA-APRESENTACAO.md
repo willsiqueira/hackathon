@@ -2,7 +2,8 @@
 
 Hackathon MPF & AWS 2026. Demonstração ao vivo de até 5 minutos, seguida de perguntas da banca.
 
-- **Aplicação:** <https://d3ruzott08qnzm.cloudfront.net>
+- **Aplicação:** <https://d3ruzott08qnzm.cloudfront.net>. QR code para o slide final:
+  [`docs/qrcode-app.png`](qrcode-app.png) (ou `qrcode-app.svg`, que não perde nitidez ao ampliar)
 - **Conta AWS:** 698271685662 (us-east-1), pilha `LexGabinete`
 - **Senha dos usuários de demonstração:** combinada com quem fez o cadastro. Passe por canal privado e nunca no
   repositório, no slide ou no chat do evento.
