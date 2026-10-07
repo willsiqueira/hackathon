@@ -11,7 +11,7 @@ Documentos de referência (fonte da verdade para requisitos e regras):
 - `docs/hackathon-expedientes/instrucoes-hackathon.md` — RF01–RF19, RNFs, modelo DynamoDB, arquitetura sugerida
 - `docs/hackathon-expedientes/README.md` — dicionário de dados
 - `docs/hackathon-expedientes/criterios-avaliacao-hackathon.html` — critérios da banca
-- `seed/saida/` — dados sintéticos (CSV e `dynamodb/itens.json`)
+- `docs/hackathon-expedientes/seed/saida/` — dados sintéticos (CSV e `dynamodb/itens.json`)
 
 ## 1. Atendimento aos requisitos
 
@@ -25,7 +25,7 @@ Documentos de referência (fonte da verdade para requisitos e regras):
   - RN5 não arquivar com `qtdMinutasPendentes > 0`.
   - RN6 usuário só vê o próprio setor; em sigiloso, servidor só vê conteúdo se for o responsável.
   - RN7 BAIXADO fica fora do painel e dos contadores, mas entra nos indicadores.
-- Use os dados sintéticos do kit (`seed/saida`) e o modelo de tabela única com GSI1/GSI2 já definido no `itens.json`. Não invente esquema paralelo.
+- Use os dados sintéticos do kit (`docs/hackathon-expedientes/seed/saida`) e o modelo de tabela única com GSI1/GSI2 já definido no `itens.json`. Não invente esquema paralelo.
 - Ofereça saídas úteis: exportação CSV do histórico, `.ics` de prazos (se RF10), JSON consistente na API.
 
 ## 2. Arquitetura AWS

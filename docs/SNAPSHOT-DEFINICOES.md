@@ -74,7 +74,7 @@ Sources: `.kiro/steering/product.md`, `.kiro/steering/tech.md`, `.kiro/steering/
 
 | # | Definition | Status |
 | --- | --- | --- |
-| R1 | Folders: `infra/` (CDK), `backend/` (Lambdas), `frontend/` (Angular), `seed/` | |
+| R1 | Folders: `infra/` (CDK), `backend/` (Lambdas), `frontend/` (Angular). Kit docs and seed only in `docs/hackathon-expedientes/` | |
 | R2 | Kiro spec (requirements → design → tasks) in `.kiro/specs/` before code, plus hooks in `.kiro/hooks/` | |
 | R3 | README with architecture diagram, build/deploy/seed steps, cost estimate and what is missing for production | |
 
@@ -83,6 +83,6 @@ Sources: `.kiro/steering/product.md`, `.kiro/steering/tech.md`, `.kiro/steering/
 1. **`.kiro/settings/mcp.json` is committed with paths from one machine** (`C:\Users\Abraão Pessoa\...`, `C:\Program Files\nodejs\npx.cmd`). On other machines the MCP servers won't start. Options: each person keeps a local copy and we stop tracking the file, or we commit a portable version (`uvx` / `npx`) and each person sets full paths in their user-level config.
 2. **`tech.md` "Local environment notes" describe one machine** (Avast certificate bundle, no Docker, uv via winget). These notes don't apply to other teammates. Proposal: move them to a personal file or mark them as specific to one machine.
 3. **Everything lives inside the repo now.** The folders outside it (`../docs`, `../frontend`) are gone. The steering points to `docs/hackathon-expedientes/`, and the visual reference is `docs/hackathon-expedientes/Unico — Caixa do Gabinete.html`. Nothing should reference `../`.
-4. **The docs and seed are in two places.** `instrucoes-hackathon.md`, `caso-de-uso-hackathon.md` and `seed/` exist both at the root and in `docs/hackathon-expedientes/`, and the copies are identical today. Steering points to `docs/hackathon-expedientes/`, but `criterios-avaliacao.md` mentions `seed/saida/`. Choose one location and delete the other copy.
+4. **Docs and seed have one location: `docs/hackathon-expedientes/`.** The root copies (`instrucoes-hackathon.md`, `caso-de-uso-hackathon.md`, `seed/`) were identical and have been removed. All steering files point there. If a branch still uses `seed/...` at the root, update it to `docs/hackathon-expedientes/seed/...`.
 5. **Stack choices that the official instructions leave open.** The instructions allow "Angular or another" SPA and don't fix the IaC tool. The steering chose Angular, CDK (TypeScript), REST API and Vitest. If anyone started with SAM, HTTP API, React or Python Lambdas, agree on one option now.
 6. **Optional items with no owner yet:** Bedrock, Verified Permissions, KMS keys, EventBridge/SES. Decide what goes into the MVP.

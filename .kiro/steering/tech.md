@@ -9,7 +9,7 @@ inclusion: always
   - `infra/` - AWS CDK v2 app (TypeScript)
   - `backend/` - Lambda handlers (TypeScript, Node.js 22.x runtime)
   - `frontend/` - Angular SPA + Bootstrap (matches Único's look; reference prototype in `docs/hackathon-expedientes/Unico — Caixa do Gabinete.html`)
-  - `seed/` - copy of the seed generator / loader
+  - `docs/hackathon-expedientes/` - kit docs, seed generator/loader (`seed/gerar_seed.py`) and data (`seed/saida/`). Single copy; do not duplicate it at the root
 - Do not commit generated build output, `cdk.out/`, `node_modules/`, `.env*` or any AWS credentials.
 
 ## AWS architecture
