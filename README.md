@@ -9,6 +9,8 @@ está no topo, permite agir em lote e abre o dia com uma tela inicial de contado
 
 Kit do caso (requisitos, dicionário de dados e seed): [`docs/hackathon-expedientes/`](docs/hackathon-expedientes/).
 Spec do Kiro: [`.kiro/specs/painel-expedientes/`](.kiro/specs/painel-expedientes/) (requisitos, design e tarefas).
+Protótipos visuais estáticos (HTML, sem API e sem RN6; a IA da opção 2 é simulada):
+[`docs/prototipos/`](docs/prototipos/).
 
 ## Arquitetura
 
@@ -56,7 +58,8 @@ flowchart LR
 
 ## Rodar localmente
 
-Pré-requisito: Node.js 22 ou superior. O servidor local carrega o `itens.json` do kit numa tabela em memória (mesma
+Pré-requisito: Node.js 22.22.3 ou superior (exigência do Angular CLI 22.2). Com um Node mais antigo, gere o build do
+frontend com `npx -y -p node@22 -- node node_modules/@angular/cli/bin/ng.js build`. O servidor local carrega o `itens.json` do kit numa tabela em memória (mesma
 semântica de chaves do DynamoDB) e usa a data de referência da base, 07/10/2026 17h.
 
 ```bash
@@ -100,13 +103,21 @@ validação completa de acessibilidade ainda depende de teste manual com leitor 
 
 ## Publicar na AWS
 
-Use sempre o perfil `hackathon` (conta do evento, `us-east-1`). Nunca o perfil `default`.
+Use sempre o perfil `hackathon` (conta do evento 698271685662, `us-east-1`), nunca o `default`. Publique só pelos
+scripts `npm run bootstrap`, `npm run synth` e `npm run deploy`, que já passam `--profile hackathon`. A conta está fixa
+em `infra/bin/app.ts`: com credenciais de outra conta, o deploy falha em vez de publicar no lugar errado.
+
+Ordem: bootstrap do CDK (uma vez por conta) → build do frontend → deploy (a pilha cria a tabela `Expedientes`) →
+carga do seed **sem** `--criar-tabela` (senão falha com `ResourceInUseException`) → usuários no Cognito.
+
+Bash (Linux, macOS, Git Bash):
 
 ```bash
 # Na raiz do repositório
 (cd backend && npm ci)
 (cd frontend && npm ci && npm run build)                  # o CDK publica o build no S3
-(cd infra && npm ci && npm run synth && npm run deploy)   # synth antes de todo deploy
+(cd infra && npm ci && npm run bootstrap)                 # só na primeira vez na conta
+(cd infra && npm run synth && npm run deploy)             # synth antes de todo deploy
 
 # Carga do seed na tabela criada pela pilha (sem --criar-tabela)
 AWS_PROFILE=hackathon uv run --no-project --with boto3 python docs/hackathon-expedientes/seed/gerar_seed.py \
@@ -115,6 +126,29 @@ AWS_PROFILE=hackathon uv run --no-project --with boto3 python docs/hackathon-exp
 # Usuários fictícios no Cognito (a senha fica só no terminal)
 (cd infra && USER_POOL_ID=<saída UserPoolId> SENHA_DEMO='<12+ caracteres>' npm run usuarios)
 ```
+
+PowerShell (Windows):
+
+```powershell
+# Na raiz do repositório
+npm ci --prefix backend
+npm ci --prefix frontend; npm run build --prefix frontend
+npm ci --prefix infra; npm run bootstrap --prefix infra    # bootstrap só na primeira vez
+npm run synth --prefix infra; npm run deploy --prefix infra
+
+# Carga do seed (sem --criar-tabela)
+$env:AWS_PROFILE = 'hackathon'
+uv run --no-project --with boto3 python docs/hackathon-expedientes/seed/gerar_seed.py --carregar --tabela Expedientes --regiao us-east-1
+
+# Usuários fictícios no Cognito
+$env:USER_POOL_ID = '<saída UserPoolId>'
+$env:SENHA_DEMO = Read-Host 'Senha de demonstração (12+ caracteres)'
+npm run usuarios --prefix infra    # usa o perfil hackathon por padrão
+Remove-Item Env:SENHA_DEMO
+```
+
+Se um antivírus interceptar o HTTPS e o npm, o CDK ou o boto3 falharem com erro de certificado, aponte
+`NODE_EXTRA_CA_CERTS` e `AWS_CA_BUNDLE` para um arquivo PEM com as CAs raiz da máquina.
 
 A saída `Url` da pilha é o endereço da aplicação. Para o resumo diário, passe `-c remetente=<e-mail verificado no SES>`
 e, com o SES em sandbox, `-c destinatarioDemo=<e-mail verificado>`. Para limpar: `npm run destroy` (todos os recursos
@@ -129,8 +163,10 @@ usam `RemovalPolicy.DESTROY`).
   conteúdo. CSV, histórico, `.ics` e e-mail **nunca** levam conteúdo de sigiloso, qualquer que seja o perfil.
 - **Entradas validadas com zod**, limites de lote (200) e de página (100), corpo até 100 KB, Query parametrizada.
   CSV protegido contra injeção de fórmula.
-- **Menor privilégio:** uma role por Lambda, só as ações usadas; teste automatizado garante ausência de `*`.
-- **Criptografia:** DynamoDB com KMS e PITR; S3 privado (OAC, SSE, só HTTPS); CloudFront com CSP, HSTS e
+- **Menor privilégio:** uma role por Lambda, com permissões restritas à tabela, aos índices, ao barramento e às
+  identidades SES; teste automatizado garante ausência de `*` em ações. Próximo passo: trocar os `grant*Data` por
+  políticas só com as ações usadas (sem `Scan`, `DeleteItem`, `BatchWriteItem`).
+- **Criptografia:** DynamoDB com KMS (chave gerenciada pela AWS, `aws/dynamodb`) e PITR; S3 privado (OAC, SSE, só HTTPS); CloudFront com CSP, HSTS e
   `X-Frame-Options`.
 - **Logs** estruturados sem corpo de requisição nem conteúdo de expediente; log de acesso da API sem query string.
 - **LGPD:** só dados sintéticos do kit; eventos e e-mails levam o mínimo (etiquetas e números); sessão em

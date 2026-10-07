@@ -39,7 +39,7 @@
     Scheduler, S3 + CloudFront (OAC, CSP), publicação do frontend
   - [x] 4.2 Testes da pilha (nenhum método anônimo, IAM sem `*`, criptografia, HTTPS, eventos)
   - [x] 4.3 Script de cadastro dos usuários fictícios no Cognito
-  - [ ] 4.4 Deploy na conta do evento (`npm run deploy` em `infra/`, perfil `hackathon`) e carga do seed
+  - [x] 4.4 Deploy na conta do evento (`npm run deploy` em `infra/`, perfil `hackathon`) e carga do seed
 
 - [x] 5. Frontend Angular (`frontend/`)
   - [x] 5.1 Projeto, Bootstrap com a paleta do Único, configuração, autenticação (guard, interceptor), layout acessível

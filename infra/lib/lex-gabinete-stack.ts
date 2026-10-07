@@ -93,7 +93,9 @@ export class LexGabineteStack extends Stack {
         .withStandardAttributes({ email: true, fullname: true })
         .withCustomAttributes('idUsuario', 'siglaSetor'),
       // custom:idUsuario e custom:siglaSetor não são graváveis pelo cliente: a identidade não pode ser trocada pela tela.
-      writeAttributes: new cognito.ClientAttributes().withStandardAttributes({ fullname: true }),
+      // email entra porque é obrigatório (o Cognito exige atributos obrigatórios graváveis); como é imutável e não há
+      // autocadastro, o cliente não consegue alterá-lo.
+      writeAttributes: new cognito.ClientAttributes().withStandardAttributes({ email: true, fullname: true }),
     });
 
     // ---------- eventos de domínio ----------

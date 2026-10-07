@@ -7,10 +7,12 @@
 import { App, Tags } from 'aws-cdk-lib';
 import { LexGabineteStack } from '../lib/lex-gabinete-stack.js';
 
+const CONTA_EVENTO = '698271685662';
 const app = new App();
 const stack = new LexGabineteStack(app, 'LexGabinete', {
   // Conta do evento (perfil AWS "hackathon"); nunca o perfil default.
-  env: { account: process.env.CDK_DEFAULT_ACCOUNT ?? '698271685662', region: 'us-east-1' },
+  // Conta fixa: se as credenciais forem de outra conta, o deploy falha em vez de publicar no lugar errado.
+  env: { account: CONTA_EVENTO, region: 'us-east-1' },
   description: 'Painel de expedientes do gabinete - Hackathon MPF & AWS 2026 (dados sintéticos)',
   remetente: app.node.tryGetContext('remetente'),
   destinatarioDemo: app.node.tryGetContext('destinatarioDemo'),

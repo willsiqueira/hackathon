@@ -41,6 +41,8 @@ inclusion: always
 
 ## Local environment notes (Windows + pwsh)
 - An antivirus intercepts TLS. Root CAs are exported to `%USERPROFILE%\.certs\windows-roots.pem` and wired through `NODE_EXTRA_CA_CERTS`, `AWS_CA_BUNDLE`, `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `UV_SYSTEM_CERTS`, and npm `cafile`. If a tool fails with a certificate error, point it at that bundle.
-- Python is provided by uv (`uv run`, `uvx`). Seed load: `uv run --no-project --with boto3 python docs/hackathon-expedientes/seed/gerar_seed.py --carregar --criar-tabela --tabela Expedientes --regiao us-east-1`.
+- Python is provided by uv (`uv run`, `uvx`). Seed load (after `npm run deploy` in `infra/`, which creates the table; never pass `--criar-tabela`): `uv run --no-project --with boto3 python docs/hackathon-expedientes/seed/gerar_seed.py --carregar --tabela Expedientes --regiao us-east-1`.
+- Node: Angular CLI 22.2 needs Node >= 22.22.3. If the local Node is older, build with `npx -y -p node@22 -- node node_modules/@angular/cli/bin/ng.js build` in `frontend/`.
+- CDK bootstrap (once per account/region): `npm run bootstrap` in `infra/`.
 - Docker is not installed: prefer CDK `NodejsFunction` with local esbuild bundling (add `esbuild` as a devDependency).
 - AWS credentials: event account 698271685662 (role WSParticipantRole) lives in the `hackathon` profile in `~/.aws/credentials`. `AWS_PROFILE=hackathon` is set at user level. Always deploy with `--profile hackathon`. The `default` profile is a different account (552149258862) and must not be used. The credentials are temporary STS keys: on `ExpiredToken`, ask the user for new ones. Never write keys into the repo.

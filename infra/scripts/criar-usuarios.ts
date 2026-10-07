@@ -31,7 +31,9 @@ if (senha.length < 12 || !/[a-z]/.test(senha) || !/[A-Z]/.test(senha) || !/\d/.t
 const [cabecalho, ...linhas] = readFileSync(CSV, 'utf8').trim().split(/\r?\n/);
 const colunas = cabecalho.split(',');
 const usuarios = linhas.map((l) => Object.fromEntries(l.split(',').map((v, i) => [colunas[i], v])));
-const cognito = new CognitoIdentityProviderClient({ region: 'us-east-1' }) // perfil via AWS_PROFILE=hackathon;
+// Perfil da conta do evento por padrão (funciona igual em Bash e PowerShell); AWS_PROFILE explícito prevalece.
+process.env.AWS_PROFILE ??= 'hackathon';
+const cognito = new CognitoIdentityProviderClient({ region: 'us-east-1' });
 
 for (const u of usuarios) {
   if (u.ativo !== 'true') continue;

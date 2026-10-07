@@ -4,6 +4,7 @@ dist/
 .angular/
 coverage/
 cdk.out/
+cdk-outputs.json
 *.tsbuildinfo
 __pycache__/
 .venv/
