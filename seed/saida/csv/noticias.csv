@@ -1,0 +1,5 @@
+idNoticia,titulo,categoria,conteudo,prioridade,destaque,dataInicioExibicao,dataFimExibicao
+1,Nova versão do painel de expedientes,SISTEMA,Texto fictício do informe 'Nova versão do painel de expedientes'.,1,true,2026-10-02T11:00:00-03:00,2026-11-01
+2,Manutenção programada no fim de semana,MANUTENCAO,Texto fictício do informe 'Manutenção programada no fim de semana'.,2,false,2026-09-27T13:00:00-03:00,2026-10-27
+3,Treinamento: marcadores e designações,CAPACITACAO,Texto fictício do informe 'Treinamento: marcadores e designações'.,3,false,2026-10-06T11:00:00-03:00,2026-11-05
+4,Novo prazo de tramitação para Notícias de Fato,NORMATIVO,Texto fictício do informe 'Novo prazo de tramitação para Notícias de Fato'.,2,true,2026-09-27T12:00:00-03:00,2026-10-27
