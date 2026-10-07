@@ -8,7 +8,7 @@ inclusion: always
 - This workspace root is the app repo (git remote: github.com/willsiqueira/hackathon). Suggested layout:
   - `infra/` - AWS CDK v2 app (TypeScript)
   - `backend/` - Lambda handlers (TypeScript, Node.js 22.x runtime)
-  - `frontend/` - Angular SPA + Bootstrap (matches Único's look; reference HTML in `../frontend/`)
+  - `frontend/` - Angular SPA + Bootstrap (matches Único's look; reference prototype in `docs/hackathon-expedientes/Unico — Caixa do Gabinete.html`)
   - `seed/` - copy of the seed generator / loader
 - Do not commit generated build output, `cdk.out/`, `node_modules/`, `.env*` or any AWS credentials.
 
