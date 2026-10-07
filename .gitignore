@@ -21,3 +21,4 @@ cdk.context.local.json
 # OS / editor
 .DS_Store
 Thumbs.db
+SETUP-AMBIENTE.md
