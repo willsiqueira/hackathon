@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opção 2 · Cockpit com IA — Painel de Expedientes</title>
+<style>
+  :root{--bg:#0b1020;--card:#121a30;--card2:#18223d;--borda:#25314f;--txt:#e7ecf7;--sub:#9aa7c4;--ac:#7c9cff;--ac2:#b38cff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;background:radial-gradient(1200px 600px at 80% -10%,#1d2a5a 0,transparent 60%),radial-gradient(900px 500px at -10% 10%,#2a1850 0,transparent 55%),var(--bg);color:var(--txt);font-size:14px;line-height:1.5;min-height:100vh}
+  :focus-visible{outline:3px solid #ffd166;outline-offset:2px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .app{display:grid;grid-template-columns:72px 1fr;min-height:100vh}
+  @media(max-width:760px){.app{grid-template-columns:1fr}.side{display:none}}
+  .side{background:rgba(8,12,26,.7);border-right:1px solid var(--borda);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:10px}
+  .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--ac),var(--ac2));display:grid;place-items:center;font-weight:800;color:#0b1020;margin-bottom:14px}
+  .side a{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--sub);text-decoration:none;font-size:18px}
+  .side a[aria-current]{background:var(--card2);color:#fff;box-shadow:inset 0 0 0 1px var(--borda)}
+  main{padding:22px 28px 60px;max-width:1400px}
+  .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .top h1{font-size:24px;font-weight:700;letter-spacing:-.3px}
+  .top p{color:var(--sub)}
+  .top .dir{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .chip-setor{background:var(--card2);border:1px solid var(--borda);padding:6px 12px;border-radius:999px;font-size:13px}
+  .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ffd166,#ef476f);display:grid;place-items:center;font-weight:800;color:#1a1020}
+
+  .glass{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01)),var(--card);border:1px solid var(--borda);border-radius:16px}
+  /* IA */
+  .ia{padding:18px 20px;margin-bottom:16px;position:relative;overflow:hidden}
+  .ia::before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(124,156,255,.10) 50%,transparent 70%);animation:brilho 4s infinite}
+  @keyframes brilho{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+  @media(prefers-reduced-motion:reduce){.ia::before{animation:none}}
+  .ia .tag{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:700;color:#c8b6ff;background:rgba(179,140,255,.12);border:1px solid rgba(179,140,255,.35);padding:2px 10px;border-radius:999px;margin-bottom:8px}
+  .ia p#txt{font-size:16px;line-height:1.6;min-height:52px;max-width:1000px}
+  .ia p#txt b{color:#ffd166}
+  .ia small{color:var(--sub);display:block;margin-top:6px}
+  .cursor{display:inline-block;width:8px;height:18px;background:var(--ac);vertical-align:-3px;animation:pisca 1s steps(2) infinite}
+  @keyframes pisca{50%{opacity:0}}
+
+  /* busca natural */
+  .busca{padding:14px 16px;margin-bottom:16px}
+  .busca form{display:flex;gap:10px;align-items:center}
+  .busca label{font-weight:600;font-size:13px;color:var(--sub);display:block;margin-bottom:6px}
+  .busca input{flex:1;background:#0d1428;border:1px solid var(--borda);color:var(--txt);font:inherit;font-size:15px;padding:12px 14px;border-radius:12px}
+  .busca button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 18px;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#0b1020;cursor:pointer}
+  .sug{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .sug button{font:inherit;font-size:12px;background:transparent;border:1px dashed var(--borda);color:var(--sub);border-radius:999px;padding:4px 10px;cursor:pointer}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;min-height:4px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:rgba(124,156,255,.14);border:1px solid rgba(124,156,255,.45);color:#dfe6ff;border-radius:999px;padding:3px 6px 3px 12px;font-size:13px;animation:entra .3s}
+  .chip button{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:50%;width:20px;height:20px;cursor:pointer;display:grid;place-items:center;padding:0;font:700 14px/1 Arial,sans-serif}
+  [hidden]{display:none!important}
+  @keyframes entra{from{transform:scale(.6);opacity:0}}
+  .pensando{color:var(--sub);font-size:13px}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
+  .kpi{padding:16px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:var(--c);opacity:.12;filter:blur(8px)}
+  .kpi h2{font-size:12px;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:flex;gap:6px;align-items:center}
+  .kpi h2 i{font-style:normal;width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
+  .kpi .n{font-size:38px;font-weight:800;letter-spacing:-1px}
+  .kpi .d{font-size:12px;color:var(--sub)}
+  .kpi .d b{color:#ff8a8a}
+  .kpi svg{display:block;margin-top:6px;width:100%;height:36px}
+
+  .grid{display:grid;grid-template-columns:1.1fr 1.4fr 1fr;gap:14px;margin-bottom:16px}
+  @media(max-width:1100px){.grid{grid-template-columns:1fr}}
+  .bloco{padding:16px}
+  .bloco header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .bloco h2{font-size:15px}
+  .tgl{font:inherit;font-size:12px;background:var(--card2);color:var(--sub);border:1px solid var(--borda);border-radius:8px;padding:3px 10px;cursor:pointer}
+  .donut-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .leg{list-style:none;font-size:13px}
+  .leg li{display:flex;align-items:center;gap:8px;padding:2px 0}
+  .leg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .leg b{margin-left:auto;padding-left:14px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  caption{text-align:left;color:var(--sub);font-size:12px;padding-bottom:6px}
+  th{color:var(--sub);text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px;border-bottom:1px solid var(--borda)}
+  td{padding:9px 8px;border-bottom:1px solid rgba(37,49,79,.6)}
+  .carga li{list-style:none;margin-bottom:10px}
+  .carga .l{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
+  .carga .bar{height:10px;background:#0d1428;border-radius:6px;overflow:hidden}
+  .carga .bar span{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#4dd4ac,#7c9cff);transition:width 1s}
+  .carga .sug-b{font-size:11px;font-weight:700;background:#4dd4ac;color:#06231a;border-radius:6px;padding:0 6px;margin-left:6px}
+
+  /* fila */
+  .fila{padding:16px}
+  .fila header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px}
+  .selo{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);white-space:nowrap}
+  tbody tr{box-shadow:inset 4px 0 0 var(--c)}
+  tbody tr:hover{background:rgba(124,156,255,.06)}
+  .pts{font-weight:800}
+  .risco{display:flex;align-items:center;gap:6px}
+  .risco .m{width:60px;height:6px;border-radius:4px;background:#0d1428;overflow:hidden}
+  .risco .m span{display:block;height:100%;background:linear-gradient(90deg,#ffd166,#ef476f)}
+  .flag{font-size:11px;font-weight:700;padding:0 6px;border-radius:4px;margin-right:3px;background:#2a2150;color:#d6c8ff;white-space:nowrap}
+  .flag.p{background:#4a1626;color:#ffb3c1}
+  .flag.s{background:#2b3446;color:#cfd8e3}
+  .muted{color:var(--sub);font-size:12px}
+  .rodape{color:var(--sub);font-size:12px;text-align:center;margin-top:20px}
+  #aviso{position:fixed;bottom:16px;right:16px;background:var(--card2);border:1px solid var(--borda);padding:10px 14px;border-radius:12px;display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="side" aria-label="Principal">
+    <div class="logo" aria-hidden="true">Ú</div>
+    <a href="#" aria-current="page" aria-label="Início" title="Início">⌂</a>
+    <a href="#fila" aria-label="Painel" title="Painel">☰</a>
+    <a href="#graficos" aria-label="Indicadores" title="Indicadores">▥</a>
+    <a href="#" aria-label="Calendário" title="Calendário">▦</a>
+  </nav>
+  <main>
+    <div class="top">
+      <div><h1>Boa tarde, Dra. Ana</h1><p>quarta-feira, 7 de outubro de 2026 · Subprocuradora-Geral da República</p></div>
+      <div class="dir"><span class="chip-setor">GABSUB3-DVT · Gabinete</span><button class="chip-setor" type="button" style="color:inherit;cursor:pointer;font:inherit" aria-label="Alertas: 7 não lidos">🔔 7</button><div class="av" aria-hidden="true">AE</div></div>
+    </div>
+
+    <section class="glass ia" aria-labelledby="ia-h">
+      <span class="tag" id="ia-h">✦ Resumo do dia · Amazon Bedrock</span>
+      <p id="txt" aria-live="polite"></p>
+      <small>Gerado a partir dos contadores e alertas do setor. Conteúdo de processos sigilosos não é enviado ao modelo.</small>
+    </section>
+
+    <section class="glass busca" aria-labelledby="b-h">
+      <form id="fb">
+        <div style="flex:1">
+          <label id="b-h" for="nl">Pergunte em linguagem natural</label>
+          <div style="display:flex;gap:10px"><input id="nl" autocomplete="off" placeholder="Ex.: réu preso que vence esta semana"><button type="submit">Filtrar</button></div>
+        </div>
+      </form>
+      <div class="sug" aria-label="Sugestões"><span class="muted">Tente:</span>
+        <button type="button">réu preso que vence esta semana</button>
+        <button type="button">vencidos com a Ana</button>
+        <button type="button">execução penal vence hoje</button>
+        <button type="button">nova intimação</button>
+      </div>
+      <div class="chips" id="chips" aria-live="polite"></div>
+    </section>
+
+    <section class="kpis" aria-label="Contadores do setor" id="kpis"></section>
+
+    <div class="grid" id="graficos">
+      <section class="glass bloco" aria-labelledby="g1">
+        <header><h2 id="g1">Situação dos prazos</h2><button class="tgl" type="button" data-t="t1" aria-expanded="false">Ver tabela</button></header>
+        <div class="donut-wrap" id="v1"></div>
+        <div id="t1" hidden></div>
+      </section>
+      <section class="glass bloco" aria-labelledby="g2">
+        <header><h2 id="g2">Estoque no setor · 30 dias</h2><button class="tgl" type="button" data-t="t2" aria-expanded="false">Ver tabela</button></header>
+        <div id="v2"></div>
+        <div id="t2" hidden style="max-height:220px;overflow:auto"></div>
+      </section>
+      <section class="glass bloco" aria-labelledby="g3">
+        <header><h2 id="g3">Carga da equipe</h2><button class="tgl" type="button" id="bal">Distribuir 6</button></header>
+        <ul class="carga" id="carga"></ul>
+        <p class="muted">Carga = ativos + 5 × devoluções atrasadas (RF14)</p>
+      </section>
+    </div>
+
+    <section class="glass fila" id="fila" aria-labelledby="f-h">
+      <header><h2 id="f-h" style="font-size:16px">Fila do gabinete · Judicial</h2><span class="muted" id="cnt" aria-live="polite"></span></header>
+      <div style="overflow-x:auto">
+      <table>
+        <caption>Ordenada por prazo e, no empate, pela pontuação (RN3). Risco combina dias restantes e tempo parado (RF08).</caption>
+        <thead><tr><th id="h1" scope="col">Prazo</th><th id="h2" scope="col">Pontos</th><th id="h3" scope="col">Risco</th><th id="h4" scope="col">Processo</th><th id="h5" scope="col">Assunto</th><th id="h6" scope="col">Ação</th><th id="h7" scope="col">Responsável</th><th id="h8" scope="col">Sinais</th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+      </div>
+    </section>
+    <p class="rodape">Protótipo visual com dados sintéticos do kit. A IA é simulada neste arquivo.</p>
+  </main>
+</div>
+<div id="aviso" role="status" aria-live="polite"></div>
+
+<script>
+const ST={VENCIDO:{t:'Vencido',i:'✕',c:'#ff6b6b',p:50},VENCE_HOJE:{t:'Vence hoje',i:'◷',c:'#ff9f43',p:45},CRITICO:{t:'Até 3 dias',i:'▲',c:'#ffd166',p:35},ATENCAO:{t:'Até 7 dias',i:'◆',c:'#f4e285',p:20},NO_PRAZO:{t:'No prazo',i:'✓',c:'#4dd4ac',p:5}};
+const E=[
+ ['MS 3.616.515/RJ','Dano moral','Analisar intimação','2026-09-10',-27,'VENCIDO','',0,17,'EM_ANALISE','Elisa Amostra',0],
+ ['AgInt 3.824.029/DF','Tráfico de drogas','Analisar intimação','2026-09-15',-22,'VENCIDO','',0,21,'EM_ANALISE','Ana Exemplo',0],
+ ['EDcl 1.677.265/RJ','Improbidade administrativa','Receber','2026-10-03',-4,'VENCIDO','',0,5,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',1],
+ ['MS 2.804.011/PE','Execução penal','Movimentar','2026-10-05',-2,'VENCIDO','',0,2,'PRONTO_PARA_ENVIO','Diego Fictício',0],
+ ['EDcl 1.444.638/RJ','Dano moral','Receber','2026-10-07',0,'VENCE_HOJE','Idoso',1,4,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0],
+ ['AREsp 3.185.212/DF','Improbidade administrativa','Elaborar manifestação','2026-10-07',0,'VENCE_HOJE','Réu preso',0,73,'MINUTA_EM_ELABORACAO','Bruno Teste',0],
+ ['APn 3.077.459/SP','Execução penal','Assinar manifestação','2026-10-07',0,'VENCE_HOJE','',0,21,'AGUARDANDO_ASSINATURA','Bruno Teste',0],
+ ['CC 1.851.531/BA','Execução penal','Elaborar manifestação','2026-10-07',0,'VENCE_HOJE','',0,0,'MINUTA_EM_ELABORACAO','Ana Exemplo',0],
+ ['RHC 2.986.980/RS','Benefício previdenciário','Elaborar manifestação','2026-10-07',0,'VENCE_HOJE','',0,3,'MINUTA_EM_ELABORACAO','Ana Exemplo',0],
+ ['AREsp 1.787.091/BA','Contrato bancário','Assinar manifestação','2026-10-08',1,'CRITICO','',0,25,'AGUARDANDO_ASSINATURA','Diego Fictício',0],
+ ['AgInt 2.583.603/SP','Execução penal','Receber','2026-10-08',1,'CRITICO','',0,1,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0],
+ ['AgInt 3.862.084/PE','Crimes contra a administração pública','Receber','2026-10-08',1,'CRITICO','',0,0,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0],
+ ['APn 2.958.924/PE','Tributos federais','Elaborar manifestação','2026-10-08',1,'CRITICO','',0,2,'MINUTA_EM_ELABORACAO','Ana Exemplo',0],
+ ['APn 2.059.041/PE','Dano moral','Analisar intimação','2026-10-08',1,'CRITICO','',0,11,'EM_ANALISE','Bruno Teste',0],
+ ['EDcl 3.736.879/DF','Improbidade administrativa','Movimentar','2026-10-09',2,'CRITICO','',0,5,'PRONTO_PARA_ENVIO','Fábio Demo',1],
+ ['REsp 3.921.153/PE','Dano moral','Elaborar manifestação','2026-10-11',4,'ATENCAO','Réu preso',1,9,'MINUTA_EM_ELABORACAO','Ana Exemplo',0],
+ ['HC 3.212.286/MG','Dano moral','Receber','2026-10-11',4,'ATENCAO','',1,1,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0],
+ ['EDcl 3.547.183/BA','Tributos federais','Assinar manifestação','2026-10-11',4,'ATENCAO','',0,13,'AGUARDANDO_ASSINATURA','Fábio Demo',0],
+ ['CC 1.519.953/PE','Tráfico de drogas','Receber','2026-10-12',5,'ATENCAO','',0,8,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0],
+ ['HC 2.564.985/SP','Contrato bancário','Analisar intimação','2026-10-13',6,'ATENCAO','',0,19,'EM_ANALISE','Ana Exemplo',0],
+ ['HC 2.048.662/SP','Tributos federais','Dar ciência','2026-10-13',6,'ATENCAO','',0,0,'AGUARDANDO_CIENCIA','Fábio Demo',0]
+].map(([num,assunto,acao,prazo,dias,st,urg,ni,parado,sit,resp,sig])=>{
+  let pts=ST[st].p+(urg?30:0)+(ni?10:0)+(parado>30?10:0)+(sit==='AGUARDANDO_ASSINATURA'?5:0);
+  const risco=Math.min(100,Math.round((dias<=0?65:Math.max(0,65-dias*9))+Math.min(35,parado*0.8)));
+  return {num,assunto,acao,prazo,dias,st,urg,ni:!!ni,parado,sit,resp,sig:!!sig,pts,risco}});
+E.sort((a,b)=>a.prazo.localeCompare(b.prazo)||b.pts-a.pts);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dm=d=>d.slice(8,10)+'/'+d.slice(5,7);
+const quando=n=>n<0?`há ${-n}d`:n===0?'hoje':`em ${n}d`;
+const selo=st=>`<span class="selo" style="--c:${ST[st].c}"><span aria-hidden="true">${ST[st].i}</span>${ST[st].t}</span>`;
+
+// resumo IA (efeito de digitação)
+const RES='Hoje <b>24 expedientes vencem</b> no gabinete, 5 deles judiciais. Há <b>2 processos com réu preso</b> na semana, e o AREsp 3.185.212/DF vence hoje e está parado há 73 dias. Os vencidos subiram de 16 para <b>50 em 30 dias</b>. Sugestão: distribuir os 6 judiciais a receber começando por Diego Fictício, que tem a menor carga.';
+(function digita(){const el=document.getElementById('txt'),red=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(red){el.innerHTML=RES;return}
+  const plano=RES.replace(/<\/?b>/g,'');let i=0;el.setAttribute('aria-busy','true');
+  const t=setInterval(()=>{i+=2;let k=0,out='';for(const parte of RES.split(/(<\/?b>)/)){if(/^<\/?b>$/.test(parte)){out+=parte;continue}const n=Math.max(0,Math.min(parte.length,i-k));out+=parte.slice(0,n);k+=parte.length}
+    el.innerHTML=out+(i<plano.length?'<span class="cursor" aria-hidden="true"></span>':'');if(i>=plano.length){clearInterval(t);el.removeAttribute('aria-busy')}},18)})();
+
+// KPIs
+const venc=[16,18,21,21,22,24,24,25,28,29,31,34,31,32,35,37,36,35,36,39,42,44,42,45,46,47,53,55,56,50];
+const est=[195,200,205,211,215,221,226,236,245,252,259,267,267,280,289,298,309,312,320,328,331,340,346,356,367,370,380,387,394,389];
+const ent=[5,10,4,7,6,8,9,9,10,9,6,7,12,11,12,9,12,6,4,9,10,18,12,13,7,12,6,14,10,1];
+function area(a,c,h=36,w=200){const mx=Math.max(...a),mn=Math.min(...a);const p=a.map((v,i)=>[(i/(a.length-1)*w),h-2-(v-mn)/(mx-mn||1)*(h-6)]);const id='g'+Math.random().toString(36).slice(2,7);
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity=".45"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient></defs><path d="M0,${h} L${p.map(q=>q.join(',')).join(' L')} L${w},${h}Z" fill="url(#${id})"/><polyline points="${p.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`}
+const K=[{t:'No setor',n:389,c:'#7c9cff',s:est,d:'<b>+194</b> em 30 dias'},{t:'Vencidos',n:50,c:'#ff6b6b',s:venc,d:'<b>+34</b> em 30 dias'},{t:'Vencem hoje',n:24,c:'#ff9f43',s:[3,5,2,6,4,7,5,8,6,9,7,12,10,24],d:'5 judiciais · 19 documentos'},{t:'A receber',n:20,c:'#b38cff',s:ent,d:'17 judiciais · 6 novos em 24h'}];
+document.getElementById('kpis').innerHTML=K.map(k=>`<article class="glass kpi" style="--c:${k.c}"><h2><i></i>${k.t}</h2><div class="n" data-n="${k.n}">0</div><div class="d">${k.d}</div>${area(k.s,k.c)}</article>`).join('');
+document.querySelectorAll('.kpi .n').forEach(el=>{const a=+el.dataset.n;let i=0;const t=setInterval(()=>{i++;el.textContent=Math.round(a*(1-Math.pow(1-Math.min(i/40,1),3)));if(i>=40)clearInterval(t)},20)});
+
+// donut
+const D=[['VENCIDO',50],['VENCE_HOJE',24],['CRITICO',51],['ATENCAO',66],['NO_PRAZO',223]];const tot=D.reduce((a,d)=>a+d[1],0);
+let ang=0;const R=60,C=2*Math.PI*R;
+document.getElementById('v1').innerHTML=`<svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="Gráfico de rosca da situação dos prazos; tabela disponível no botão Ver tabela"><g transform="rotate(-90 85 85)">${D.map(([k,v])=>{const l=v/tot*C,s=`<circle cx="85" cy="85" r="${R}" fill="none" stroke="${ST[k].c}" stroke-width="20" stroke-dasharray="${l-2} ${C-l+2}" stroke-dashoffset="${-ang}"/>`;ang+=l;return s}).join('')}</g><text x="85" y="82" text-anchor="middle" fill="#e7ecf7" font-size="26" font-weight="800">${tot}</text><text x="85" y="102" text-anchor="middle" fill="#9aa7c4" font-size="11">ativos</text></svg><ul class="leg">${D.map(([k,v])=>`<li><i style="background:${ST[k].c}"></i>${ST[k].i} ${ST[k].t}<b>${v}</b></li>`).join('')}</ul>`;
+document.getElementById('t1').innerHTML=`<table><caption>Situação dos prazos · GABSUB3-DVT</caption><thead><tr><th scope="col">Situação</th><th scope="col">Qtd.</th><th scope="col">%</th></tr></thead><tbody>${D.map(([k,v])=>`<tr><th scope="row" style="text-transform:none;font-size:13px;color:inherit">${ST[k].t}</th><td>${v}</td><td>${(v/tot*100).toFixed(0)}%</td></tr>`).join('')}</tbody></table>`;
+// estoque
+document.getElementById('v2').innerHTML=`<div style="height:150px">${area(est,'#7c9cff',150,400).replace('<svg','<svg style="width:100%;height:150px"')}</div><div style="height:60px;margin-top:-60px;opacity:.9">${area(venc.map(v=>v*1.0),'#ff6b6b',60,400).replace('<svg','<svg style="width:100%;height:60px"')}</div><ul class="leg" style="display:flex;gap:16px;margin-top:8px"><li><i style="background:#7c9cff"></i>No setor (195 → 389)</li><li><i style="background:#ff6b6b"></i>Vencidos (16 → 50)</li></ul>`;
+const dias=Array.from({length:30},(_,i)=>{const d=new Date(2026,8,8+i);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')});
+document.getElementById('t2').innerHTML=`<table><caption>Estoque diário · últimos 30 dias</caption><thead><tr><th scope="col">Dia</th><th scope="col">No setor</th><th scope="col">Vencidos</th><th scope="col">Entradas</th></tr></thead><tbody>${dias.map((d,i)=>`<tr><th scope="row" style="font-size:13px;color:inherit">${d}</th><td>${est[i]}</td><td>${venc[i]}</td><td>${ent[i]}</td></tr>`).reverse().join('')}</tbody></table>`;
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const t=document.getElementById(b.dataset.t),v=document.getElementById('v'+b.dataset.t.slice(1));const on=t.hidden;t.hidden=!on;v.hidden=on;b.textContent=on?'Ver gráfico':'Ver tabela';b.setAttribute('aria-expanded',on)});
+
+// carga da equipe
+let EQ=[['Carla Modelo',47,1],['Diego Fictício',44,0],['Elisa Amostra',61,2],['Fábio Demo',53,3]];
+function carga(){const sc=EQ.map(e=>e[1]+5*e[2]),mn=Math.min(...sc),mx=80;
+  document.getElementById('carga').innerHTML=EQ.map((e,i)=>`<li><div class="l"><span>${e[0]}${sc[i]===mn?'<span class="sug-b">sugerido</span>':''}</span><span>${e[1]} ativos · ${e[2]} atrasada${e[2]!==1?'s':''} · <b>${sc[i]}</b></span></div><div class="bar" role="img" aria-label="Carga ${sc[i]}"><span style="width:${sc[i]/mx*100}%"></span></div></li>`).join('')}
+carga();
+document.getElementById('bal').onclick=function(){for(let k=0;k<6;k++){let i=0,b=1e9;EQ.forEach((e,j)=>{const s=e[1]+5*e[2];if(s<b){b=s;i=j}});EQ[i][1]++}carga();this.disabled=true;this.textContent='Distribuídos';
+  const a=document.getElementById('aviso');a.textContent='6 processos distribuídos de forma equilibrada. Desfazer disponível na trilha de lotes.';a.style.display='block';setTimeout(()=>a.style.display='none',4000)};
+
+// fila + filtros por linguagem natural
+let F=[];
+function render(){const L=E.filter(e=>F.every(f=>f.fn(e)));
+  document.getElementById('cnt').textContent=`${L.length} de ${E.length} processos`;
+  document.getElementById('tb').innerHTML=L.map(e=>`<tr style="--c:${ST[e.st].c}"><td headers="h1">${selo(e.st)}<div class="muted">${dm(e.prazo)} · ${quando(e.dias)}</div></td><td headers="h2" class="pts">${e.pts}</td><td headers="h3"><div class="risco"><div class="m" aria-hidden="true"><span style="width:${e.risco}%"></span></div><span>${e.risco}</span></div></td><td headers="h4"><strong>${esc(e.num)}</strong></td><td headers="h5">${e.sig?'<span class="muted">🔒 Sigiloso</span>':esc(e.assunto)}</td><td headers="h6">${esc(e.acao)}</td><td headers="h7">${esc(e.resp)}</td><td headers="h8">${e.urg==='Réu preso'?'<span class="flag p">Réu preso</span>':''}${e.urg==='Idoso'?'<span class="flag">Idoso</span>':''}${e.ni?'<span class="flag">Nova intimação</span>':''}${e.parado>30?`<span class="flag s">Parado ${e.parado}d</span>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="muted" style="text-align:center;padding:20px">Nada encontrado.</td></tr>'}
+const REGRAS=[[/r[eé]u preso/,'Réu preso',e=>e.urg==='Réu preso'],[/\bidos[oa]s?\b/,'Idoso',e=>e.urg==='Idoso'],[/urgent/,'Urgente',e=>!!e.urg],[/nova intima/,'Nova intimação',e=>e.ni],[/vence hoje|\bhoje\b/,'Vence hoje',e=>e.dias===0],[/vencid|atrasad/,'Vencidos',e=>e.dias<0],[/amanh/,'Vence amanhã',e=>e.dias===1],[/semana/,'Vence em até 7 dias',e=>e.dias>=0&&e.dias<=7],[/parad/,'Parado > 30 dias',e=>e.parado>30],[/assinat/,'Aguardando assinatura',e=>e.sit==='AGUARDANDO_ASSINATURA']];
+const ASS=['execução penal','dano moral','improbidade','tributos','tráfico','contrato bancário','previdenci'];
+const PES=['ana','bruno','diego','elisa','fábio','fabio'];
+function interpretar(q){q=q.toLowerCase();const r=[];
+  REGRAS.forEach(([re,t,fn])=>{if(re.test(q))r.push({t,fn})});
+  ASS.forEach(a=>{if(q.includes(a))r.push({t:'Assunto: '+a,fn:e=>e.assunto.toLowerCase().includes(a)})});
+  PES.forEach(p=>{if(new RegExp('\\b'+p+'\\b').test(q)){const n=E.find(e=>e.resp.toLowerCase().startsWith(p.replace('fabio','fábio')));if(n)r.push({t:'Responsável: '+n.resp,fn:e=>e.resp===n.resp})}});
+  return r}
+function chips(){document.getElementById('chips').innerHTML=F.map((f,i)=>`<span class="chip">${esc(f.t)}<button type="button" data-i="${i}" aria-label="Remover filtro ${esc(f.t)}">×</button></span>`).join('')}
+document.getElementById('chips').onclick=ev=>{const b=ev.target.closest('[data-i]');if(!b)return;F.splice(+b.dataset.i,1);chips();render()};
+function buscar(q){const c=document.getElementById('chips');c.innerHTML='<span class="pensando">✦ Interpretando com Bedrock…</span>';
+  setTimeout(()=>{F=interpretar(q);if(!F.length){c.innerHTML='<span class="pensando">Não entendi um filtro nessa frase. Tente "vencidos", "réu preso", "esta semana" ou um assunto.</span>';render();return}chips();render()},650)}
+document.getElementById('fb').onsubmit=ev=>{ev.preventDefault();buscar(document.getElementById('nl').value)};
+document.querySelectorAll('.sug button').forEach(b=>b.onclick=()=>{document.getElementById('nl').value=b.textContent;buscar(b.textContent)});
+render();
+</script>
+</body>
+</html>

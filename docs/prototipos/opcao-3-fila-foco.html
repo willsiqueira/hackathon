@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opção 3 · Quadro e modo foco — Painel de Expedientes</title>
+<style>
+  :root{--bg:#f6f4ef;--card:#fff;--borda:#e6e1d6;--txt:#22201c;--sub:#6b665c;--ac:#3b4cca}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5}
+  :focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  header{display:flex;align-items:center;gap:16px;padding:14px 28px;flex-wrap:wrap;background:var(--card);border-bottom:1px solid var(--borda)}
+  header .brand{font-weight:800;font-size:18px}
+  header .brand span{color:var(--ac)}
+  .seg{display:inline-flex;background:#efece4;border-radius:10px;padding:3px}
+  .seg button{font:inherit;border:0;background:transparent;padding:6px 14px;border-radius:8px;cursor:pointer;color:var(--sub);font-weight:600}
+  .seg button[aria-pressed=true]{background:#fff;color:var(--txt);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  header .dir{margin-left:auto;display:flex;gap:12px;align-items:center}
+  .btn-foco{font:inherit;font-weight:700;background:var(--ac);color:#fff;border:0;border-radius:10px;padding:9px 16px;cursor:pointer;box-shadow:0 4px 14px rgba(59,76,202,.35)}
+  kbd{font-family:ui-monospace,Consolas,monospace;font-size:11px;background:#fff;border:1px solid #cfc9bb;border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--txt)}
+  .btn-foco kbd{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:#fff}
+  main{padding:20px 28px 60px}
+  .faixa{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .met{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:10px 14px;min-width:150px;display:flex;align-items:center;gap:12px}
+  .met .n{font-size:26px;font-weight:800}
+  .met .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;background:var(--bgc);color:var(--c)}
+  .met small{display:block;color:var(--sub);font-size:12px;line-height:1.2}
+  .layout{display:grid;grid-template-columns:1fr 290px;gap:18px}
+  @media(max-width:1100px){.layout{grid-template-columns:1fr}}
+
+  /* quadro */
+  .quadro{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:14px;overflow-x:auto}
+  @media(max-width:800px){.quadro{grid-template-columns:1fr}}
+  .col{background:#efece4;border-radius:14px;padding:10px;min-height:200px}
+  .col h2{font-size:13px;display:flex;align-items:center;gap:8px;padding:4px 6px 10px;text-transform:uppercase;letter-spacing:.4px}
+  .col h2 .ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:var(--c);color:#fff;font-size:12px}
+  .col h2 .q{margin-left:auto;background:#fff;border-radius:999px;padding:0 8px;font-size:12px}
+  .cartao{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer;border-left:5px solid var(--c);transition:transform .12s,box-shadow .12s}
+  .cartao:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.08)}
+  .cartao .l1{display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .cartao .num{font-weight:700}
+  .cartao .ass{color:var(--sub);font-size:13px;margin:2px 0 6px}
+  .cartao .l3{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--sub)}
+  .av{width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;font-size:10px;font-weight:700;color:#fff;background:var(--c)}
+  .pbar{height:5px;border-radius:3px;background:#eee;overflow:hidden;margin-bottom:6px}
+  .pbar span{display:block;height:100%;background:linear-gradient(90deg,#f9a825,#c62828)}
+  .prio{font-size:11px;font-weight:800;padding:1px 7px;border-radius:5px;color:#fff;background:var(--c)}
+  .prio.m{color:#3b2c00}
+  .flag{font-size:10px;font-weight:700;padding:0 5px;border-radius:4px;background:#ede7f6;color:#4527a0;margin-right:3px}
+  .flag.p{background:#fdecea;color:#8e1c1c}
+  .flag.s{background:#263238;color:#fff}
+
+  /* lateral */
+  .lado{display:grid;gap:14px;align-content:start}
+  .box{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px}
+  .box h2{font-size:14px;margin-bottom:10px}
+  .cal{width:100%;border-collapse:collapse;text-align:center;font-size:12px}
+  .cal th{color:var(--sub);font-weight:600;padding:2px}
+  .cal td{padding:2px}
+  .cal .d{display:grid;place-items:center;height:32px;border-radius:8px;position:relative}
+  .cal .d.h{outline:2px solid var(--ac)}
+  .cal .d b{position:absolute;bottom:1px;right:3px;font-size:9px}
+  .ics{margin-top:10px;font:inherit;font-size:13px;width:100%;padding:7px;border-radius:8px;border:1px solid var(--borda);background:#faf9f6;cursor:pointer}
+  .atalhos li{list-style:none;display:flex;justify-content:space-between;padding:3px 0;font-size:13px}
+
+  /* modo foco */
+  .foco{position:fixed;inset:0;background:rgba(20,18,30,.72);backdrop-filter:blur(4px);display:none;z-index:50;padding:3vh 3vw;overflow:auto}
+  .foco.on{display:block}
+  .fcard{max-width:880px;margin:0 auto;background:var(--card);border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:sobe .25s}
+  @keyframes sobe{from{transform:translateY(20px);opacity:0}}
+  @media(prefers-reduced-motion:reduce){.fcard{animation:none}.cartao{transition:none}}
+  .fhead{padding:22px 28px;color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 60%,#000))}
+  .fhead .top{display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.95}
+  .fhead h2{font-size:30px;letter-spacing:-.5px;margin:6px 0 2px}
+  .fhead .st{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.2);border-radius:999px;padding:3px 12px;font-weight:700}
+  .prog{height:6px;background:rgba(255,255,255,.25);border-radius:3px;margin-top:14px;overflow:hidden}
+  .prog span{display:block;height:100%;background:#fff;transition:width .3s}
+  .fbody{display:grid;grid-template-columns:1.2fr 1fr;gap:24px;padding:22px 28px}
+  @media(max-width:720px){.fbody{grid-template-columns:1fr}}
+  .acao-p{background:#f3f4ff;border:1px solid #d5d9ff;border-radius:12px;padding:14px;margin-bottom:16px}
+  .acao-p small{color:var(--sub);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.4px}
+  .acao-p div{font-size:20px;font-weight:700;color:var(--ac)}
+  .stack{display:flex;height:22px;border-radius:8px;overflow:hidden;margin:8px 0}
+  .stack span{display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+  .why li{list-style:none;display:flex;justify-content:space-between;font-size:13px;padding:2px 0}
+  .why i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+  .tl{list-style:none;border-left:2px dashed #d6d0c2;margin-left:6px}
+  .tl li{position:relative;padding:0 0 12px 16px;font-size:13px}
+  .tl li::before{content:"";position:absolute;left:-7px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--ac)}
+  .tl time{display:block;font-size:11px;color:var(--sub)}
+  .ffoot{display:flex;gap:10px;flex-wrap:wrap;padding:16px 28px;border-top:1px solid var(--borda);background:#faf9f6;align-items:center}
+  .ffoot button{font:inherit;font-weight:700;border-radius:10px;padding:9px 14px;cursor:pointer;border:1px solid var(--borda);background:#fff;display:inline-flex;gap:8px;align-items:center}
+  .ffoot .pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+  .ffoot .pri kbd{background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.4)}
+  .ffoot .esp{margin-left:auto}
+  .feito{padding:60px 28px;text-align:center}
+  .feito h2{font-size:28px;margin-bottom:6px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#22201c;color:#fff;border-radius:12px;padding:10px 16px;display:none;gap:14px;align-items:center;z-index:80;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .toast.on{display:flex}
+  .toast .cd{width:26px;height:26px}
+  .toast button{background:#ffd166;border:0;border-radius:8px;padding:5px 10px;font:inherit;font-weight:700;cursor:pointer}
+  .rodape{color:var(--sub);font-size:12px;text-align:center;margin-top:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Único <span>Fila</span></div>
+  <div class="seg" role="group" aria-label="Gerenciador">
+    <button type="button" aria-pressed="false">Todos</button><button type="button" aria-pressed="true">Judicial</button><button type="button" aria-pressed="false">Documento</button><button type="button" aria-pressed="false">Extrajudicial</button>
+  </div>
+  <div class="dir">
+    <span style="color:var(--sub)">Bruno Teste · Chefe de Gabinete · GABSUB3-DVT</span>
+    <button class="btn-foco" type="button" id="abrirFoco">▶ Próximo processo <kbd>F</kbd></button>
+  </div>
+</header>
+<main>
+  <section class="faixa" aria-label="Resumo do dia" id="faixa"></section>
+  <div class="layout">
+    <section aria-labelledby="q-h">
+      <h1 id="q-h" class="sr">Quadro de prazos</h1>
+      <div class="quadro" id="quadro"></div>
+    </section>
+    <aside class="lado">
+      <section class="box" aria-labelledby="cal-h">
+        <h2 id="cal-h">Outubro de 2026 · prazos</h2>
+        <table class="cal" id="cal"><caption class="sr">Calendário com a quantidade de prazos judiciais por dia</caption></table>
+        <button class="ics" type="button" id="ics">⤓ Exportar .ics (sigilosos sem conteúdo)</button>
+      </section>
+      <section class="box" aria-labelledby="at-h">
+        <h2 id="at-h">Atalhos do modo foco</h2>
+        <ul class="atalhos">
+          <li><span>Abrir / sair</span><span><kbd>F</kbd> / <kbd>Esc</kbd></span></li>
+          <li><span>Próximo / anterior</span><span><kbd>J</kbd> / <kbd>K</kbd></span></li>
+          <li><span>Executar ação pendente</span><span><kbd>Enter</kbd></span></li>
+          <li><span>Designar (sugestão)</span><span><kbd>D</kbd></span></li>
+          <li><span>Desfazer</span><span><kbd>U</kbd></span></li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+  <p class="rodape">Protótipo visual com dados sintéticos do kit (GABSUB3-DVT, judiciais).</p>
+</main>
+
+<div class="foco" id="foco" role="dialog" aria-modal="true" aria-labelledby="f-num"><div class="fcard" id="fcard"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg class="cd" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="#555" stroke-width="4"/><circle id="cdc" cx="18" cy="18" r="15" fill="none" stroke="#ffd166" stroke-width="4" stroke-dasharray="94.2" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg>
+  <span id="toast-t"></span><button type="button" id="desf">Desfazer <kbd>U</kbd></button>
+</div>
+
+<script>
+const ST={VENCIDO:{t:'Vencido',i:'✕',c:'#C62828',bg:'#FDECEA',p:50},VENCE_HOJE:{t:'Vence hoje',i:'◷',c:'#E65100',bg:'#FFF0E5',p:45},CRITICO:{t:'Até 3 dias',i:'▲',c:'#C99000',bg:'#FFF8E1',p:35},ATENCAO:{t:'Até 7 dias',i:'◆',c:'#9E8A00',bg:'#FFFDE7',p:20},NO_PRAZO:{t:'No prazo',i:'✓',c:'#2E7D32',bg:'#E8F5E9',p:5}};
+const PR={CRITICA:['Crítica','#C62828'],ALTA:['Alta','#D84315'],MEDIA:['Média','#F9A825'],BAIXA:['Baixa','#2E7D32']};
+const COR={'Ana Exemplo':'#6A1B9A','Bruno Teste':'#3b4cca','Diego Fictício':'#00838F','Elisa Amostra':'#AD1457','Fábio Demo':'#5D4037','Carla Modelo':'#2E7D32'};
+let E=[
+ ['MS 3.616.515/RJ','Dano moral','NO_SETOR','Analisar intimação','2026-09-10',-27,'VENCIDO','',0,17,'EM_ANALISE','Elisa Amostra',0,0],
+ ['AgInt 3.824.029/DF','Tráfico de drogas','NO_SETOR','Analisar intimação','2026-09-15',-22,'VENCIDO','',0,21,'EM_ANALISE','Ana Exemplo',0,0],
+ ['EDcl 1.677.265/RJ','Improbidade administrativa','A_RECEBER','Receber','2026-10-03',-4,'VENCIDO','',0,5,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',1,0],
+ ['MS 2.804.011/PE','Execução penal','NO_SETOR','Movimentar','2026-10-05',-2,'VENCIDO','',0,2,'PRONTO_PARA_ENVIO','Diego Fictício',0,0],
+ ['EDcl 1.444.638/RJ','Dano moral','A_RECEBER','Receber','2026-10-07',0,'VENCE_HOJE','Idoso',1,4,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0,0],
+ ['AREsp 3.185.212/DF','Improbidade administrativa','NO_SETOR','Elaborar manifestação','2026-10-07',0,'VENCE_HOJE','Réu preso',0,73,'MINUTA_EM_ELABORACAO','Bruno Teste',0,1],
+ ['APn 3.077.459/SP','Execução penal','NO_SETOR','Assinar manifestação','2026-10-07',0,'VENCE_HOJE','',0,21,'AGUARDANDO_ASSINATURA','Bruno Teste',0,1],
+ ['CC 1.851.531/BA','Execução penal','NO_SETOR','Elaborar manifestação','2026-10-07',0,'VENCE_HOJE','',0,0,'MINUTA_EM_ELABORACAO','Ana Exemplo',0,1],
+ ['RHC 2.986.980/RS','Benefício previdenciário','NO_SETOR','Elaborar manifestação','2026-10-07',0,'VENCE_HOJE','',0,3,'MINUTA_EM_ELABORACAO','Ana Exemplo',0,1],
+ ['AREsp 1.787.091/BA','Contrato bancário','NO_SETOR','Assinar manifestação','2026-10-08',1,'CRITICO','',0,25,'AGUARDANDO_ASSINATURA','Diego Fictício',0,1],
+ ['AgInt 2.583.603/SP','Execução penal','A_RECEBER','Receber','2026-10-08',1,'CRITICO','',0,1,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0,0],
+ ['AgInt 3.862.084/PE','Crimes contra a administração pública','A_RECEBER','Receber','2026-10-08',1,'CRITICO','',0,0,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0,0],
+ ['APn 2.958.924/PE','Tributos federais','NO_SETOR','Elaborar manifestação','2026-10-08',1,'CRITICO','',0,2,'MINUTA_EM_ELABORACAO','Ana Exemplo',0,1],
+ ['APn 2.059.041/PE','Dano moral','NO_SETOR','Analisar intimação','2026-10-08',1,'CRITICO','',0,11,'EM_ANALISE','Bruno Teste',0,0],
+ ['EDcl 3.736.879/DF','Improbidade administrativa','NO_SETOR','Movimentar','2026-10-09',2,'CRITICO','',0,5,'PRONTO_PARA_ENVIO','Fábio Demo',1,0],
+ ['REsp 3.921.153/PE','Dano moral','NO_SETOR','Elaborar manifestação','2026-10-11',4,'ATENCAO','Réu preso',1,9,'MINUTA_EM_ELABORACAO','Ana Exemplo',0,1],
+ ['HC 3.212.286/MG','Dano moral','A_RECEBER','Receber','2026-10-11',4,'ATENCAO','',1,1,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0,0],
+ ['EDcl 3.547.183/BA','Tributos federais','NO_SETOR','Assinar manifestação','2026-10-11',4,'ATENCAO','',0,13,'AGUARDANDO_ASSINATURA','Fábio Demo',0,1],
+ ['CC 1.519.953/PE','Tráfico de drogas','A_RECEBER','Receber','2026-10-12',5,'ATENCAO','',0,8,'AGUARDANDO_RECEBIMENTO','Ana Exemplo',0,0],
+ ['HC 2.564.985/SP','Contrato bancário','NO_SETOR','Analisar intimação','2026-10-13',6,'ATENCAO','',0,19,'EM_ANALISE','Ana Exemplo',0,0],
+ ['HC 2.048.662/SP','Tributos federais','NO_SETOR','Dar ciência','2026-10-13',6,'ATENCAO','',0,0,'AGUARDANDO_CIENCIA','Fábio Demo',0,0]
+].map(([num,assunto,caixa,acao,prazo,dias,st,urg,ni,parado,sit,resp,sig,min],i)=>({id:i,num,assunto,caixa,acao,prazo,dias,st,urg,ni:!!ni,parado,sit,resp,sig:!!sig,min,feito:false}));
+function motivos(e){const r=[[ST[e.st].t,ST[e.st].p,ST[e.st].c]];if(e.urg)r.push(['Urgente: '+e.urg,30,'#6A1B9A']);if(e.ni)r.push(['Nova intimação',10,'#1565C0']);if(e.parado>30)r.push([`Parado há ${e.parado} dias`,10,'#546E7A']);if(e.sit==='AGUARDANDO_ASSINATURA')r.push(['Aguardando assinatura',5,'#00897B']);return r}
+E.forEach(e=>{e.pts=motivos(e).reduce((a,m)=>a+m[1],0);e.prio=e.pts>=60?'CRITICA':e.pts>=35?'ALTA':e.pts>=20?'MEDIA':'BAIXA'});
+E.sort((a,b)=>a.prazo.localeCompare(b.prazo)||b.pts-a.pts);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dm=d=>d.slice(8,10)+'/'+d.slice(5,7);
+const quando=n=>n<0?`venceu há ${-n} dia${n<-1?'s':''}`:n===0?'vence hoje':`vence em ${n} dia${n>1?'s':''}`;
+const ini=n=>n.split(' ').map(p=>p[0]).join('').slice(0,2);
+const flags=e=>`${e.urg==='Réu preso'?'<span class="flag p">Réu preso</span>':''}${e.urg==='Idoso'?'<span class="flag">Idoso</span>':''}${e.ni?'<span class="flag">Nova intimação</span>':''}${e.parado>30?`<span class="flag" style="background:#eceff1;color:#37474f">Parado ${e.parado}d</span>`:''}${e.sig?'<span class="flag s">🔒 Sigiloso</span>':''}`;
+
+function faixa(){const ativos=E.filter(e=>!e.feito);const c=k=>ativos.filter(e=>e.st===k).length;
+  const M=[['✕','Vencidos',c('VENCIDO'),'#C62828','#FDECEA'],['◷','Vencem hoje',c('VENCE_HOJE'),'#E65100','#FFF0E5'],['▲','Até 3 dias',c('CRITICO'),'#8a6400','#FFF8E1'],['!','Urgentes',ativos.filter(e=>e.urg).length,'#6A1B9A','#F3E5F5'],['✓','Feitos hoje',E.filter(e=>e.feito).length,'#2E7D32','#E8F5E9']];
+  document.getElementById('faixa').innerHTML=M.map(m=>`<div class="met" style="--c:${m[3]};--bgc:${m[4]}"><span class="ic" aria-hidden="true">${m[0]}</span><div><span class="n">${m[2]}</span><small>${m[1]}<br>judiciais</small></div></div>`).join('')}
+
+function quadro(){const cols=['VENCIDO','VENCE_HOJE','CRITICO','ATENCAO'];
+  document.getElementById('quadro').innerHTML=cols.map(k=>{const L=E.filter(e=>e.st===k&&!e.feito);
+    return `<section class="col" aria-labelledby="col-${k}"><h2 id="col-${k}"><span class="ic" style="--c:${ST[k].c}" aria-hidden="true">${ST[k].i}</span>${ST[k].t}<span class="q">${L.length}</span></h2>${L.map(e=>`<button type="button" class="cartao" style="--c:${ST[k].c}" data-id="${e.id}" aria-label="${esc(e.num)}, ${quando(e.dias)}, prioridade ${PR[e.prio][0]} com ${e.pts} pontos. Abrir no modo foco">
+      <div class="pbar" aria-hidden="true"><span style="width:${e.pts}%"></span></div>
+      <div class="l1"><span class="num">${esc(e.num)}</span><span class="prio ${e.prio==='MEDIA'?'m':''}" style="--c:${PR[e.prio][1]}">${PR[e.prio][0]} ${e.pts}</span></div>
+      <div class="ass">${e.sig?'Conteúdo sigiloso':esc(e.assunto)}</div>
+      <div>${flags(e)}</div>
+      <div class="l3"><span>${dm(e.prazo)} · ${esc(e.acao)}</span><span class="av" style="--c:${COR[e.resp]}" title="${esc(e.resp)}">${ini(e.resp)}</span></div></button>`).join('')||'<p style="color:var(--sub);padding:8px">Tudo em dia ✓</p>'}</section>`}).join('')}
+
+function calendario(){const cont={};E.filter(e=>!e.feito).forEach(e=>{if(e.prazo.startsWith('2026-10'))cont[+e.prazo.slice(8)]=(cont[+e.prazo.slice(8)]||0)+1});
+  const first=new Date(2026,9,1).getDay();let h='<thead><tr>'+['D','S','T','Q','Q','S','S'].map((d,i)=>`<th scope="col" abbr="${['domingo','segunda','terça','quarta','quinta','sexta','sábado'][i]}">${d}</th>`).join('')+'</tr></thead><tbody><tr>';
+  for(let i=0;i<first;i++)h+='<td></td>';
+  for(let d=1;d<=31;d++){const n=cont[d]||0,a=Math.min(n/5,1);const bg=n?`rgba(${d<7?'198,40,40':d===7?'230,81,0':'201,144,0'},${.15+a*.6})`:'transparent';
+    h+=`<td><span class="d ${d===7?'h':''}" style="background:${bg}" aria-label="${d} de outubro${n?`, ${n} prazo${n>1?'s':''}`:''}${d===7?', hoje':''}">${d}${n?`<b aria-hidden="true">${n}</b>`:''}</span></td>`;
+    if((first+d)%7===0)h+='</tr><tr>'}
+  document.getElementById('cal').innerHTML=document.getElementById('cal').querySelector('caption').outerHTML+h+'</tr></tbody>'}
+
+// modo foco
+let idx=0,ult=null;const foco=document.getElementById('foco'),fc=document.getElementById('fcard');
+const fila=()=>E.filter(e=>!e.feito);
+function hist(e){const h=[['28/04/2025','Cadastro em SECAD/PGR'],['18/07/2026','Enviado ao GABSUB3-DVT']];if(e.caixa==='NO_SETOR'){h.push(['20/07/2026','Recebido por Ana Exemplo']);h.push(['20/07/2026','Designado para '+e.resp])}if(e.min)h.push(['25/07/2026','Minuta de manifestação criada']);return h.reverse()}
+function desenha(){const F=fila();
+  if(!F.length){fc.innerHTML=`<div class="feito"><p style="font-size:48px">🎉</p><h2 id="f-num">Fila zerada</h2><p style="color:var(--sub)">Todos os processos judiciais com prazo na semana foram tratados.</p><p style="margin-top:16px"><button class="btn-foco" type="button" onclick="sair()">Voltar ao quadro</button></p></div>`;fc.querySelector('button').focus();return}
+  idx=Math.max(0,Math.min(idx,F.length-1));const e=F[idx],m=motivos(e),s=ST[e.st];
+  fc.style.setProperty('--c',s.c);
+  fc.innerHTML=`<div class="fhead"><div class="top"><span>Processo ${idx+1} de ${F.length} · ordem RN3 (prazo, depois pontuação)</span><span>${e.caixa==='A_RECEBER'?'Caixa: A receber':'Caixa: No setor'}</span></div>
+    <h2 id="f-num">${esc(e.num)}</h2><div style="margin-bottom:8px">${e.sig?'🔒 Conteúdo sigiloso: visível só ao responsável e à chefia':esc(e.assunto)}</div>
+    <span class="st"><span aria-hidden="true">${s.i}</span>${s.t} · ${dm(e.prazo)} · ${quando(e.dias)}</span>
+    <div class="prog" aria-hidden="true"><span style="width:${(idx+1)/F.length*100}%"></span></div></div>
+   <div class="fbody"><div>
+      <div class="acao-p"><small>Ação pendente</small><div>${esc(e.acao)}</div><span style="color:var(--sub);font-size:13px">Responsável: ${esc(e.resp)} · parado há ${e.parado} dias</span></div>
+      <h3 style="font-size:14px">Por que prioridade ${PR[e.prio][0].toLowerCase()} (${e.pts} pontos)?</h3>
+      <div class="stack" aria-hidden="true">${m.map(x=>`<span style="width:${x[1]}%;background:${x[2]}">+${x[1]}</span>`).join('')}<span style="flex:1;background:#eee"></span></div>
+      <ul class="why">${m.map(x=>`<li><span><i style="background:${x[2]}"></i>${esc(x[0])}</span><b>+${x[1]}</b></li>`).join('')}</ul>
+      <div style="margin-top:10px">${flags(e)}</div>
+    </div><div><h3 style="font-size:14px;margin-bottom:8px">Histórico</h3><ol class="tl">${hist(e).map(h=>`<li><time>${h[0]}</time>${esc(h[1])}</li>`).join('')}</ol></div></div>
+   <div class="ffoot"><button type="button" class="pri" id="bExec">${esc(e.acao)} <kbd>Enter</kbd></button><button type="button" id="bDes">Designar a Diego Fictício <kbd>D</kbd></button>
+     <span class="esp"></span><button type="button" id="bAnt" ${idx===0?'disabled':''}>← Anterior <kbd>K</kbd></button><button type="button" id="bPro">Pular → <kbd>J</kbd></button><button type="button" id="bSair">Sair <kbd>Esc</kbd></button></div>`;
+  document.getElementById('bExec').onclick=()=>executar(e,e.acao);document.getElementById('bDes').onclick=()=>executar(e,'Designado a Diego Fictício');
+  document.getElementById('bAnt').onclick=()=>{idx--;desenha()};document.getElementById('bPro').onclick=()=>{idx++;desenha()};document.getElementById('bSair').onclick=sair;
+  document.getElementById('bExec').focus()}
+function entrar(i){ult=document.activeElement;idx=i??0;foco.classList.add('on');document.body.style.overflow='hidden';desenha()}
+function sair(){foco.classList.remove('on');document.body.style.overflow='';tudo();ult?.focus?.()}
+let desfazer=null,tm=null;
+function executar(e,txt){e.feito=true;desfazer=e;desenha();faixa();
+  const t=document.getElementById('toast'),c=document.getElementById('cdc');document.getElementById('toast-t').textContent=`${txt}: ${e.num}`;t.classList.add('on');
+  let s=0;clearInterval(tm);c.style.strokeDashoffset=0;tm=setInterval(()=>{s++;c.style.strokeDashoffset=94.2*s/50;if(s>=50){clearInterval(tm);t.classList.remove('on');desfazer=null}},100)}
+function undo(){if(!desfazer)return;desfazer.feito=false;const F=fila();idx=F.indexOf(desfazer);desfazer=null;clearInterval(tm);document.getElementById('toast').classList.remove('on');faixa();foco.classList.contains('on')?desenha():tudo()}
+document.getElementById('desf').onclick=undo;
+document.getElementById('abrirFoco').onclick=()=>entrar(0);
+document.getElementById('quadro').onclick=ev=>{const b=ev.target.closest('[data-id]');if(!b)return;const e=E.find(x=>x.id==b.dataset.id);entrar(fila().indexOf(e))};
+document.addEventListener('keydown',ev=>{if(ev.ctrlKey||ev.metaKey||ev.altKey||/INPUT|SELECT|TEXTAREA/.test(ev.target.tagName))return;const k=ev.key.toLowerCase();
+  if(!foco.classList.contains('on')){if(k==='f'){ev.preventDefault();entrar(0)}if(k==='u')undo();return}
+  const F=fila();
+  if(k==='escape')sair();else if(k==='j'&&F.length){idx=Math.min(idx+1,F.length-1);desenha()}else if(k==='k'){idx=Math.max(idx-1,0);desenha()}
+  else if(k==='d'&&F.length)executar(F[idx],'Designado a Diego Fictício');else if(k==='u')undo();
+  else if(k==='enter'&&F.length&&ev.target.tagName!=='BUTTON'){ev.preventDefault();executar(F[idx],F[idx].acao)}
+  else if(k==='tab'){const f=[...fc.querySelectorAll('button:not([disabled])')];if(!f.length)return;if(ev.shiftKey&&document.activeElement===f[0]){ev.preventDefault();f.at(-1).focus()}else if(!ev.shiftKey&&document.activeElement===f.at(-1)){ev.preventDefault();f[0].focus()}}});
+
+// exportação iCal (RNF privacidade: sigiloso sai sem assunto)
+document.getElementById('ics').onclick=()=>{const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Prototipo Painel Expedientes//PT'];
+  fila().forEach((e,i)=>{const d=e.prazo.replace(/-/g,'');L.push('BEGIN:VEVENT',`UID:prazo-${i}@exemplo.org`,`DTSTART;VALUE=DATE:${d}`,`SUMMARY:Prazo ${e.num}${e.sig?' (sigiloso)':' · '+e.assunto}`,'BEGIN:VALARM','TRIGGER:-P1D','ACTION:DISPLAY','DESCRIPTION:Lembrete de prazo','END:VALARM','END:VEVENT')});
+  L.push('END:VCALENDAR');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([L.join('\r\n')],{type:'text/calendar'}));a.download='prazos-gabsub3.ics';a.click()};
+
+function tudo(){faixa();quadro();calendario()}
+tudo();
+</script>
+</body>
+</html>
