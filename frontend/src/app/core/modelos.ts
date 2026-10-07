@@ -144,7 +144,7 @@ export interface Informe {
 }
 
 export interface Widget {
-  id: 'contadores' | 'proximo' | 'prazos' | 'alertas' | 'informes' | 'filtros';
+  id: 'contadores' | 'resumoIa' | 'proximo' | 'prazos' | 'alertas' | 'informes' | 'filtros';
   visivel: boolean;
 }
 
@@ -269,6 +269,33 @@ export interface Indicadores {
   prazosPorSituacao: { chave: string; quantidade: number }[];
   pendenciasPorAssunto: { chave: string; quantidade: number }[];
   produtividade: ({ idUsuario: string; nome: string } & Record<string, number | string>)[] | null;
+}
+
+// ---------- IA generativa (Amazon Bedrock) ----------
+
+export type OrigemIa = 'bedrock' | 'demonstracao';
+
+/** Um critério interpretado pela IA, já com rótulo e valor legíveis (vindos do backend). */
+export interface ChipCriterio {
+  chave: string;
+  rotulo: string;
+  valor: string;
+}
+
+export interface RespostaBuscaIa {
+  criterios: Criterios;
+  interpretacao: ChipCriterio[];
+  descartados: string[];
+  origem: OrigemIa;
+}
+
+export interface ResumoDiaIa {
+  texto: string;
+  geradoEm: string;
+  origem: OrigemIa;
+  itensConsiderados: number;
+  sigilososSemConteudo: number;
+  doCache: boolean;
 }
 
 export interface ResumoDiario {

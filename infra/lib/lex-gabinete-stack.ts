@@ -1,5 +1,6 @@
 // Pilha única do hackathon: SPA (S3 + CloudFront), API REST (API Gateway + Lambda + Cognito),
-// DynamoDB tabela única, eventos de domínio (EventBridge) e resumo diário (EventBridge Scheduler + SES).
+// DynamoDB tabela única, eventos de domínio (EventBridge), resumo diário (EventBridge Scheduler + SES) e
+// IA com Amazon Bedrock (busca em linguagem natural e resumo do dia, chamados pela Lambda da API).
 // RemovalPolicy.DESTROY em tudo para facilitar a limpeza da conta do evento.
 
 import { existsSync } from 'node:fs';
@@ -25,6 +26,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import * as schedulerTargets from 'aws-cdk-lib/aws-scheduler-targets';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { MODELO_IA_PADRAO, permissoesModeloIa, REGIOES_MODELO_IA_PADRAO } from './permissoes-ia.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url)); // raiz do repositório
 const BACKEND = join(RAIZ, 'backend');
@@ -38,6 +40,10 @@ export interface LexGabineteProps extends StackProps {
   dataReferencia: string;
   /** Permite sintetizar nos testes sem o build do frontend. */
   publicarFrontend?: boolean;
+  /** Modelo do Amazon Bedrock (padrão: inference profile us.amazon.nova-lite-v1:0). */
+  modeloIa?: string;
+  /** Regiões de destino do inference profile (padrão: us-east-1, us-east-2, us-west-2). */
+  regioesModeloIa?: string[];
 }
 
 export class LexGabineteStack extends Stack {
@@ -93,8 +99,7 @@ export class LexGabineteStack extends Stack {
         .withStandardAttributes({ email: true, fullname: true })
         .withCustomAttributes('idUsuario', 'siglaSetor'),
       // custom:idUsuario e custom:siglaSetor não são graváveis pelo cliente: a identidade não pode ser trocada pela tela.
-      // email entra porque é obrigatório (o Cognito exige atributos obrigatórios graváveis); como é imutável e não há
-      // autocadastro, o cliente não consegue alterá-lo.
+      // email entra porque o Cognito exige atributos obrigatórios graváveis; é imutável no pool, então não muda.
       writeAttributes: new cognito.ClientAttributes().withStandardAttributes({ email: true, fullname: true }),
     });
 
@@ -126,9 +131,18 @@ export class LexGabineteStack extends Stack {
         },
       });
 
-    const api = funcao('Api', 'api.ts', { BARRAMENTO: barramento.eventBusName });
+    // Timeout da Api continua 15 s: cabe a chamada ao modelo (IA_TIMEOUT_MS = 10 s) mais as leituras,
+    // e fica bem abaixo do limite de 29 s do API Gateway.
+    const modeloIa = props.modeloIa ?? MODELO_IA_PADRAO;
+    const api = funcao('Api', 'api.ts', { BARRAMENTO: barramento.eventBusName, BEDROCK_MODEL_ID: modeloIa, IA_TIMEOUT_MS: '10000' });
     tabela.grantReadWriteData(api);
     barramento.grantPutEventsTo(api);
+    // Bedrock só para a Api, só InvokeModel, só no modelo configurado (profile + foundation models de destino).
+    for (const permissao of permissoesModeloIa({
+      modelo: modeloIa, regiao: this.region, conta: this.account, regioesDestino: props.regioesModeloIa ?? REGIOES_MODELO_IA_PADRAO,
+    })) {
+      api.addToRolePolicy(new iam.PolicyStatement(permissao));
+    }
 
     const notificador = funcao('Notificador', 'notificador.ts', {});
     tabela.grantWriteData(notificador);

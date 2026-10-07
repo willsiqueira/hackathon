@@ -11,7 +11,11 @@ import { SeloGerenciador, SeloPrazo, SeloPrioridade } from '../../compartilhado/
 import { DialogoLote, ROTULO_ACAO, acoesDoPerfil } from '../../compartilhado/dialogo-lote';
 import { dataBr, rotuloEnum } from '../../compartilhado/formatos';
 import { COLUNAS, normalizarColunas, type Coluna } from './colunas';
-import { SINALIZACOES, contarFiltros, deCriterios, formularioVazio, paraCriterios, type FormularioFiltros } from './filtros-painel';
+import {
+  SINALIZACOES, avisoBuscaIaAplicada, caixasEmExtras, contarFiltros, deCriterios, formularioVazio, paraCriterios,
+  removerCaixaDeExtras, separarCriteriosIa, type FormularioFiltros,
+} from './filtros-painel';
+import { BuscaIa } from './busca-ia';
 
 const CAIXAS = [
   { codigo: '', rotulo: 'Todas as caixas' },
@@ -19,10 +23,11 @@ const CAIXAS = [
   { codigo: 'NO_SETOR', rotulo: 'No setor' },
   { codigo: 'ENVIADO_NAO_RECEBIDO', rotulo: 'Enviados não recebidos' },
 ] as const;
+const CODIGOS_CAIXA: string[] = CAIXAS.map((c) => c.codigo).filter(Boolean);
 
 @Component({
   selector: 'app-painel',
-  imports: [FormsModule, RouterLink, SeloPrazo, SeloPrioridade, SeloGerenciador, DialogoLote],
+  imports: [FormsModule, RouterLink, SeloPrazo, SeloPrioridade, SeloGerenciador, DialogoLote, BuscaIa],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './painel.html',
 })
@@ -58,6 +63,7 @@ export class PainelPagina implements OnInit {
   protected readonly mostrarFiltros = signal(false);
   protected readonly mostrarColunas = signal(false);
   protected readonly mostrarSalvar = signal(false);
+  protected readonly mostrarBuscaIa = signal(false);
   protected filtroEscolhido = '';
   protected novoFiltro = { nome: '', padrao: false, compartilhadoComSetor: false };
 
@@ -203,6 +209,47 @@ export class PainelPagina implements OnInit {
     this.busca = '';
     this.filtroEscolhido = '';
     this.recarregar();
+  }
+
+  // ---------- busca com IA (Bedrock): só preenche os filtros existentes ----------
+
+  protected alternarBuscaIa(): void {
+    this.mostrarBuscaIa.set(!this.mostrarBuscaIa());
+    if (this.mostrarBuscaIa()) setTimeout(() => document.getElementById('busca-ia')?.focus(), 0);
+  }
+
+  protected async aplicarCriteriosIa(criterios: Criterios): Promise<void> {
+    const { gerenciador, caixa, busca, formulario } = separarCriteriosIa(criterios, this.abas(), CODIGOS_CAIXA);
+    if (gerenciador) this.gerenciador.set(gerenciador);
+    // A caixa da IA vira a aba de caixa (ou "Todas as caixas"), para não cruzar a aba atual com a lista da IA.
+    const caixaAlterada = caixa !== undefined && caixa !== this.caixa() ? this.rotuloCaixa(caixa) : undefined;
+    if (caixa !== undefined) this.caixa.set(caixa);
+    this.busca = busca;
+    this.filtros = formulario;
+    this.filtroEscolhido = '';
+    this.mostrarFiltros.set(true); // o usuário revisa e ajusta no formulário de sempre
+    this.mostrarBuscaIa.set(false);
+    this.pagina.set(1);
+    await this.carregar();
+    this.avisos.informar(avisoBuscaIaAplicada(this.resposta()?.total, caixaAlterada));
+    document.getElementById('titulo-lista')?.focus();
+  }
+
+  /** Caixas em "extras" (busca com IA com várias caixas): visíveis como chips removíveis. */
+  protected caixasExtras(): string[] {
+    return caixasEmExtras(this.filtros);
+  }
+
+  protected rotuloCaixa(codigo: string): string {
+    return CAIXAS.find((c) => c.codigo === codigo)?.rotulo ?? rotuloEnum(codigo);
+  }
+
+  protected removerCaixaExtra(codigo: string): void {
+    this.filtros = removerCaixaDeExtras(this.filtros, codigo);
+    this.filtroEscolhido = '';
+    this.recarregar();
+    // O botão clicado some: o foco volta para a aba de caixa selecionada.
+    setTimeout(() => (document.querySelector('#grupo-caixa [aria-pressed="true"]') as HTMLElement | null)?.focus(), 0);
   }
 
   protected escolherFiltroSalvo(): void {

@@ -22,7 +22,7 @@
 
 <div class="cartao rounded-top-0 border-top-0 mb-3">
   <!-- Caixas com contador (RF02) -->
-  <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Caixa">
+  <div id="grupo-caixa" class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Caixa">
     @for (c of caixas; track c.codigo) {
       <button type="button" class="btn btn-sm" [class.btn-primary]="caixa() === c.codigo" [class.btn-outline-primary]="caixa() !== c.codigo"
         [attr.aria-pressed]="caixa() === c.codigo" (click)="escolherCaixa(c.codigo)">
@@ -30,6 +30,23 @@
       </button>
     }
   </div>
+
+  <!-- Caixas que não cabem numa aba (ex.: busca com IA pedindo várias): visíveis e removíveis, nunca escondidas -->
+  @if (caixasExtras().length) {
+    <div class="d-flex flex-wrap align-items-center gap-1 mb-3 small">
+      <span id="rotulo-caixas-extras">Filtro de caixa:</span>
+      <ul class="list-inline mb-0" aria-labelledby="rotulo-caixas-extras">
+        @for (c of caixasExtras(); track c) {
+          <li class="list-inline-item mb-1">
+            <span class="badge rounded-pill text-bg-light border fw-normal">{{ rotuloCaixa(c) }}</span>
+            <button type="button" class="btn btn-link btn-sm py-0 px-1 align-baseline" (click)="removerCaixaExtra(c)">
+              Remover<span class="visually-hidden"> filtro de caixa {{ rotuloCaixa(c) }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
 
   <!-- Busca e filtros (RF03) -->
   <form class="row g-2 align-items-end" role="search" (ngSubmit)="pesquisar()">
@@ -44,6 +61,11 @@
     <div class="col-auto">
       <button type="button" class="btn btn-outline-primary" (click)="mostrarFiltros.set(!mostrarFiltros())" [attr.aria-expanded]="mostrarFiltros()" aria-controls="filtros-avancados">
         Filtros avançados @if (qtdFiltros()) { <span class="badge text-bg-primary">{{ qtdFiltros() }}</span> }
+      </button>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-outline-primary" (click)="alternarBuscaIa()" [attr.aria-expanded]="mostrarBuscaIa()" aria-controls="busca-ia-painel">
+        Buscar com IA
       </button>
     </div>
     <div class="col-12 col-md">
@@ -69,6 +91,12 @@
       </div>
     </div>
   </form>
+
+  @if (mostrarBuscaIa()) {
+    <div id="busca-ia-painel" class="mt-3 pt-3 border-top">
+      <app-busca-ia (aplicar)="aplicarCriteriosIa($event)" />
+    </div>
+  }
 
   @if (mostrarSalvar()) {
     <form id="salvar-filtro" class="row g-2 align-items-end mt-2 p-2 bg-light rounded" (ngSubmit)="salvarFiltro()">

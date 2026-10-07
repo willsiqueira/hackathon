@@ -1,0 +1,65 @@
+<section aria-labelledby="titulo-busca-ia">
+  <h2 id="titulo-busca-ia" class="h6">Buscar com IA</h2>
+
+  <form class="row g-2 align-items-end" (ngSubmit)="interpretar()">
+    <div class="col-12 col-lg">
+      <label for="busca-ia" class="form-label small mb-1">Descreva o que procura</label>
+      <textarea id="busca-ia" name="textoIa" rows="2" class="form-control" maxlength="300"
+        aria-describedby="aviso-busca-ia contador-busca-ia"
+        placeholder="Ex.: réu preso que vence esta semana designado a mim"
+        [ngModel]="texto()" (ngModelChange)="texto.set($event)"></textarea>
+      <div class="d-flex flex-wrap justify-content-between gap-2 mt-1">
+        <p id="aviso-busca-ia" class="small text-secondary mb-0">
+          <span class="badge text-bg-secondary me-1">Privacidade</span>{{ aviso }}
+        </p>
+        <p id="contador-busca-ia" class="small text-secondary mb-0">{{ texto().length }} de {{ limite }} caracteres</p>
+      </div>
+    </div>
+    <div class="col-12 col-sm-auto">
+      <button type="submit" class="btn btn-primary w-100" [disabled]="!texto().trim() || interpretando()">
+        @if (interpretando()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+        Interpretar com IA
+      </button>
+    </div>
+  </form>
+
+  <p class="small mt-2 mb-0" aria-live="polite">{{ status() }}</p>
+
+  @if (erro()) {
+    <div role="alert" class="alert alert-warning mt-2 mb-0">{{ erro() }}</div>
+  }
+
+  @if (resposta(); as r) {
+    <div class="mt-2 p-2 bg-light rounded">
+      <h3 id="resultado-busca-ia" class="h6" tabindex="-1">Filtros interpretados</h3>
+      @if (chips().length) {
+        <ul class="list-inline mb-2">
+          @for (c of chips(); track c.chave) {
+            <li class="list-inline-item mb-1">
+              <span class="badge rounded-pill text-bg-light border fw-normal text-wrap text-start">
+                <strong>{{ c.rotulo }}:</strong> {{ c.valor }}
+              </span>
+              <button type="button" class="btn btn-link btn-sm py-0 px-1 align-baseline" (click)="remover(c.chave)">
+                Remover<span class="visually-hidden"> filtro {{ c.rotulo }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="small mb-2">Nenhum filtro restante.</p>
+      }
+      @if (r.descartados.length) {
+        <p class="small mb-2">Ignorados (fora dos filtros permitidos): {{ r.descartados.join('; ') }}</p>
+      }
+      <p class="small text-secondary mb-2">{{ rotuloOrigem(r.origem) }}. Confira antes de aplicar.</p>
+      <div class="row g-2">
+        <div class="col-12 col-sm-auto">
+          <button type="button" class="btn btn-primary btn-sm w-100" [disabled]="!chips().length" (click)="aplicarFiltros()">Aplicar filtros</button>
+        </div>
+        <div class="col-12 col-sm-auto">
+          <button type="button" class="btn btn-outline-secondary btn-sm w-100" (click)="descartar()">Descartar</button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

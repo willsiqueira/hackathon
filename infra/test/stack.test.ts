@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, test } from 'vitest';
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { LexGabineteStack } from '../lib/lex-gabinete-stack.js';
+import { MODELO_IA_PADRAO, permissoesModeloIa, REGIOES_MODELO_IA_PADRAO } from '../lib/permissoes-ia.js';
 
 let template: Template;
 
@@ -83,6 +84,51 @@ describe('Segurança', () => {
         if (!acoes.every((a: string) => a.startsWith('xray:'))) expect(declaracao.Resource).not.toBe('*');
       }
     }
+  });
+});
+
+describe('IA (Bedrock)', () => {
+  const PERFIL = 'arn:aws:bedrock:us-east-1:111111111111:inference-profile/us.amazon.nova-lite-v1:0';
+  const MODELOS = ['us-east-1', 'us-east-2', 'us-west-2'].map((r) => `arn:aws:bedrock:${r}::foundation-model/amazon.nova-lite-v1:0`);
+  const declaracoesDe = (padrao: RegExp) => Object.entries(template.findResources('AWS::IAM::Policy'))
+    .filter(([id]) => padrao.test(id))
+    .flatMap(([, politica]) => politica.Properties.PolicyDocument.Statement);
+  const usaBedrock = (d: { Action: string | string[] }) => [d.Action].flat().some((a) => a.startsWith('bedrock:'));
+
+  test('a. Api recebe o modelo e o timeout da IA', () => {
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      Environment: { Variables: Match.objectLike({ BEDROCK_MODEL_ID: 'us.amazon.nova-lite-v1:0', IA_TIMEOUT_MS: '10000' }) },
+      Timeout: 15,
+    });
+  });
+
+  test('b. role da Api: InvokeModel no profile e nos foundation models de destino, com condição', () => {
+    const doBedrock = declaracoesDe(/^ApiServiceRole/).filter(usaBedrock);
+    expect(doBedrock).toHaveLength(2);
+    expect(doBedrock).toContainEqual(expect.objectContaining({ Action: 'bedrock:InvokeModel', Effect: 'Allow', Resource: PERFIL }));
+    const modelos = doBedrock.find((d) => Array.isArray(d.Resource));
+    expect(modelos).toMatchObject({
+      Action: 'bedrock:InvokeModel',
+      Condition: { StringEquals: { 'bedrock:InferenceProfileArn': PERFIL } },
+    });
+    expect([...modelos.Resource].sort()).toEqual([...MODELOS].sort());
+  });
+
+  test('c. só a Api fala com o Bedrock, sem curinga', () => {
+    expect(declaracoesDe(/^(Notificador|ResumoDiario)ServiceRole/).some(usaBedrock)).toBe(false);
+    const todas = declaracoesDe(/./).filter(usaBedrock);
+    for (const d of todas) {
+      expect([d.Action].flat()).toEqual(['bedrock:InvokeModel']);
+      for (const recurso of [d.Resource].flat()) expect(String(recurso)).not.toContain('*');
+    }
+  });
+
+  test('d. permissoesModeloIa: modelo sem profile e curinga recusado', () => {
+    expect(permissoesModeloIa({ modelo: 'amazon.nova-lite-v1:0', regiao: 'us-east-1', conta: '111111111111', regioesDestino: REGIOES_MODELO_IA_PADRAO }))
+      .toEqual([{ actions: ['bedrock:InvokeModel'], resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0'] }]);
+    expect(() => permissoesModeloIa({ modelo: '*', regiao: 'us-east-1', conta: '111111111111', regioesDestino: [] })).toThrow(/sem "\*"/);
+    expect(() => permissoesModeloIa({ modelo: 'us.amazon.*', regiao: 'us-east-1', conta: '111111111111', regioesDestino: ['us-east-1'] })).toThrow();
+    expect(() => permissoesModeloIa({ modelo: MODELO_IA_PADRAO, regiao: 'us-east-1', conta: '111111111111', regioesDestino: ['*'] })).toThrow();
   });
 });
 

@@ -61,3 +61,24 @@
   - [x] 6.2 Roteiro da demo em navegador real com axe (WCAG 2.1 AA) em desktop e 390 px
   - [x] 6.3 README com arquitetura, execução local, deploy, custo, LGPD e próximos passos
   - [x] 6.4 Hooks do Kiro: testes do backend ao salvar e revisão de sigilo/acesso
+
+- [x] 7. IA generativa (Bedrock)
+  - [x] 7.1 Domínio puro (`backend/src/dominio/ia.ts`): esquema zod do pedido, datas de referência, lista branca
+    `CAMPOS_BUSCA_IA`, montagem dos prompts, item minimizado campo a campo (`itemParaIa`, sigiloso só com etiqueta,
+    prazo e prioridade), interpretação da resposta (descartados, 422) e erros `RESPOSTA_IA_INVALIDA`/`IA_INDISPONIVEL`
+    - _Requisitos: 14_
+  - [x] 7.2 Adaptadores (`backend/src/servicos/ia.ts`): `ModeloBedrock` (Converse, timeout, 2 tentativas, erros → 503
+    sem log de prompt), `ModeloDemonstracao`, `criarIa()` pelas variáveis de ambiente e `CacheCurto` do resumo
+    - _Requisitos: 14_
+  - [x] 7.3 API: `POST /api/ia/busca`, `POST /api/ia/resumo-dia`, widget `resumoIa`, Lambda e servidor local com
+    `criarIa()`; testes em `backend/test/ia.test.ts` (domínio, adaptadores, API, sigilo para MEMBRO e SERVIDOR)
+    - _Requisitos: 14, 5.4_
+  - [x] 7.4 Infra: `infra/lib/permissoes-ia.ts`, `bedrock:InvokeModel` só na role da Api, no inference profile
+    `us.amazon.nova-lite-v1:0` e nos foundation models de us-east-1, us-east-2 e us-west-2 (com condição),
+    `BEDROCK_MODEL_ID` e `IA_TIMEOUT_MS`, contexto `-c modeloIa`/`-c regioesModeloIa`; testes da pilha
+    - _Requisitos: 14_
+  - [x] 7.5 Frontend: busca com IA no painel (`app-busca-ia`, chips revisáveis que preenchem os filtros avançados) e
+    widget "Resumo do dia (IA)" sob demanda na tela inicial; testes de `compartilhado/ia.ts` e `separarCriteriosIa`
+    - _Requisitos: 14, 5.4_
+  - [x] 7.6 Documentação: requisitos, design, tarefas, README e script do diagrama com o Bedrock
+    - _Requisitos: 14_

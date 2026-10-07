@@ -8,11 +8,14 @@ import { Repositorio } from '../dados/repositorio.js';
 import { TabelaDynamo } from '../dados/tabela-dynamo.js';
 import { PublicadorEventBridge } from '../eventos/publicador-eventbridge.js';
 import { criarRelogio, variavelObrigatoria } from '../config.js';
+import { criarIa } from '../servicos/ia.js';
 
 const tratar = criarApi({
   repo: new Repositorio(new TabelaDynamo(variavelObrigatoria('TABELA'))),
   eventos: new PublicadorEventBridge(variavelObrigatoria('BARRAMENTO')),
   relogio: criarRelogio(),
+  // BEDROCK_MODEL_ID e IA_TIMEOUT_MS vêm da stack; sem modelo, cai no modo demonstração.
+  ia: criarIa(),
 });
 
 export async function handler(evento: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {

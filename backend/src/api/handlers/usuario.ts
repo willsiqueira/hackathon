@@ -10,7 +10,7 @@ import { criado, semConteudo, type Contexto } from '../contexto.js';
 import type { Repositorio } from '../../dados/repositorio.js';
 import type { Entidade, Usuario } from '../../dominio/tipos.js';
 
-export const WIDGETS = ['contadores', 'proximo', 'prazos', 'alertas', 'informes', 'filtros'] as const;
+export const WIDGETS = ['contadores', 'resumoIa', 'proximo', 'prazos', 'alertas', 'informes', 'filtros'] as const;
 const CONTEXTOS = ['INICIO', 'PAINEL_UNIFICADO', 'JUDICIAL', 'DOCUMENTO', 'EXTRAJUDICIAL'] as const;
 const SEVERIDADES = ['CRITICO', 'ATENCAO', 'INFO'] as const;
 

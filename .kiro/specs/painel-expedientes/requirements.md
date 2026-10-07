@@ -89,7 +89,8 @@ primeiro.
 2. O sistema DEVE mostrar os próximos prazos (prazos não vencidos, na ordem da fila), o próximo expediente da fila, os
    alertas não lidos e os informes vigentes.
 3. QUANDO o usuário acionar um contador, O sistema DEVE abrir o painel com o filtro correspondente.
-4. O sistema DEVE permitir esconder, mostrar e reordenar os widgets, guardando a escolha por usuário.
+4. O sistema DEVE permitir esconder, mostrar e reordenar os widgets, guardando a escolha por usuário, incluindo o
+   widget "Resumo do dia (IA)" (`resumoIa`, Requisito 14).
 
 ### Requisito 6: detalhe e histórico (F5, RF13)
 
@@ -161,3 +162,25 @@ primeiro.
 3. Avisos DEVEM sair em região `aria-live`; erros com `role="alert"`.
 4. O layout DEVE funcionar em desktop e em telas estreitas sem perda de função.
 5. O sistema DEVE usar só dados sintéticos e não versionar credenciais.
+
+### Requisito 14: assistente com IA generativa (Amazon Bedrock)
+
+**História:** Como servidor, quero descrever em linguagem natural o que procuro e ler um resumo do dia, para achar e
+priorizar os processos sem montar filtros nem contar à mão.
+
+1. QUANDO o usuário enviar um texto de 1 a 300 caracteres na busca com IA, O sistema DEVE devolver critérios validados
+   pela mesma lista branca dos filtros do painel, restritos ao setor do usuário, e DEVE mostrá-los para revisão (com
+   opção de remover cada um) antes de aplicá-los ao formulário de filtros.
+2. O sistema NÃO DEVE enviar ao modelo, na busca, conteúdo de expediente: só o texto do usuário, as listas de domínio,
+   as datas de referência pré-calculadas e os responsáveis do próprio setor (id e nome).
+3. QUANDO o usuário pedir o resumo do dia, O sistema DEVE gerá-lo só com contagens e até 8 itens da fila montados por
+   lista branca, sem assunto, resumo, tema, número de referência, órgão de origem, nomes nem ids; itens sigilosos DEVEM
+   ir só com etiqueta, situação do prazo e prioridade, qualquer que seja o perfil.
+4. SE o modelo responder fora do formato esperado, ENTÃO O sistema DEVE responder HTTP 422 com mensagem em pt-BR; SE o
+   Bedrock falhar, demorar mais que o limite ou não estiver habilitado, ENTÃO O sistema DEVE responder HTTP 503 com
+   mensagem em pt-BR, e a pesquisa e os filtros manuais DEVEM continuar funcionando.
+5. O sistema DEVE identificar todo texto e todo filtro gerados como produzidos por IA (ou pelo modo demonstração),
+   exibir a saída do modelo só como texto (sem HTML) e gerar o resumo apenas sob demanda.
+6. A busca e o resumo DEVEM ter `label` no campo, aviso de privacidade visível ligado por `aria-describedby`, situação
+   em região `aria-live="polite"`, erros com `role="alert"` e foco movido ao resultado.
+7. O sistema NÃO DEVE registrar em log o texto enviado ao modelo nem a resposta dele.

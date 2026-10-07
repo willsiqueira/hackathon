@@ -116,6 +116,65 @@ export function deCriterios(criterios: Criterios): FormularioFiltros {
   return f;
 }
 
+/**
+ * Distribui os critérios da busca com IA pela tela: um gerenciador único que existe nas abas vira aba, e uma caixa
+ * única que existe nas abas de caixa vira a aba de caixa; "q" vira o texto da pesquisa; o resto preenche o formulário
+ * de filtros. Gerenciador que não cabe numa aba fica em "extras" e a aba volta para "TODOS". Caixa que não cabe numa
+ * aba (ou várias caixas) fica em "extras", exibida como chip removível (caixasEmExtras), e a aba de caixa volta para
+ * "Todas as caixas" (''), para não cruzar a aba atual com a lista da IA.
+ */
+export function separarCriteriosIa(
+  criterios: Criterios, abas: string[], abasCaixa: readonly string[] = [],
+): { gerenciador?: string; caixa?: string; busca: string; formulario: FormularioFiltros } {
+  const { gerenciador, caixa, q, ...resto } = criterios;
+  let aba: string | undefined;
+  if (gerenciador !== undefined) {
+    const lista = Array.isArray(gerenciador) ? gerenciador : [gerenciador];
+    if (lista.length === 1 && abas.includes(String(lista[0]))) aba = String(lista[0]);
+    else {
+      resto['gerenciador'] = gerenciador;
+      aba = 'TODOS';
+    }
+  }
+  let abaCaixa: string | undefined;
+  if (caixa !== undefined) {
+    const lista = Array.isArray(caixa) ? caixa : [caixa];
+    if (lista.length === 1 && abasCaixa.includes(String(lista[0]))) abaCaixa = String(lista[0]);
+    else {
+      resto['caixa'] = lista.map(String);
+      abaCaixa = '';
+    }
+  }
+  const busca = typeof q === 'string' ? q.trim() : '';
+  return {
+    ...(aba ? { gerenciador: aba } : {}),
+    ...(abaCaixa !== undefined ? { caixa: abaCaixa } : {}),
+    busca,
+    formulario: deCriterios(resto),
+  };
+}
+
+/** Caixas guardadas em "extras" (vindas da busca com IA ou de filtro salvo), para exibir como chips removíveis. */
+export function caixasEmExtras(f: FormularioFiltros): string[] {
+  const v = f.extras['caixa'];
+  return v === undefined ? [] : (Array.isArray(v) ? v : [v]).map(String);
+}
+
+/** Remove uma caixa de "extras"; sem caixas restantes, o critério some. */
+export function removerCaixaDeExtras(f: FormularioFiltros, codigo: string): FormularioFiltros {
+  const resto: Criterios = { ...f.extras };
+  delete resto['caixa'];
+  const restantes = caixasEmExtras(f).filter((c) => c !== codigo);
+  return { ...f, extras: restantes.length ? { ...resto, caixa: restantes } : resto };
+}
+
+/** Aviso (aria-live) depois de aplicar a busca com IA; cita a troca da aba de caixa, se houve. */
+export function avisoBuscaIaAplicada(total: number | undefined, caixaAlterada?: string): string {
+  const caixa = caixaAlterada ? `; caixa alterada para ${caixaAlterada}` : '';
+  const contagem = total !== undefined ? `: ${total} expediente(s)` : '';
+  return `Filtros da busca com IA aplicados${caixa}${contagem}. Ajuste em Filtros avançados se precisar.`;
+}
+
 /** Quantos filtros estão ativos (para o rótulo do botão). */
 export function contarFiltros(f: FormularioFiltros): number {
   return Object.keys(paraCriterios(f)).length - (f.designadoAMim ? 1 : 0);
