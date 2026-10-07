@@ -1,0 +1,23 @@
+# Dependencies and build output
+node_modules/
+dist/
+.angular/
+coverage/
+cdk.out/
+*.tsbuildinfo
+__pycache__/
+.venv/
+
+# Secrets and local config (never commit AWS credentials)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials
+.aws/
+cdk.context.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db

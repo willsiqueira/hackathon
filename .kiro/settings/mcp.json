@@ -1,0 +1,44 @@
+{
+  "mcpServers": {
+    "aws-mcp": {
+      "command": "uvx",
+      "args": [
+        "mcp-proxy-for-aws@1.7.0",
+        "https://aws-mcp.us-east-1.api.aws/mcp",
+        "--region",
+        "us-east-1",
+        "--metadata",
+        "AWS_REGION=us-east-1",
+        "--log-level",
+        "ERROR"
+      ],
+      "env": {
+        "UV_SYSTEM_CERTS": "1",
+        "AWS_CA_BUNDLE": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem"
+      },
+      "timeout": 100000,
+      "autoApprove": [
+        "aws___search_documentation",
+        "aws___read_documentation",
+        "aws___retrieve_skill"
+      ]
+    },
+    "awslabs.dynamodb-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.dynamodb-mcp-server@2.1.8"],
+      "env": {
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "ERROR",
+        "UV_SYSTEM_CERTS": "1",
+        "AWS_CA_BUNDLE": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.83"],
+      "env": {
+        "NODE_EXTRA_CA_CERTS": "C:\\Users\\Abraão Pessoa\\.certs\\windows-roots.pem"
+      }
+    }
+  }
+}
