@@ -5,11 +5,11 @@ inclusion: always
 # Tech stack and conventions
 
 ## Repository
-- Application code lives in `lex_gabinete/` (git remote: github.com/willsiqueira/hackathon). Suggested layout:
-  - `lex_gabinete/infra/` - AWS CDK v2 app (TypeScript)
-  - `lex_gabinete/backend/` - Lambda handlers (TypeScript, Node.js 22.x runtime)
-  - `lex_gabinete/frontend/` - Angular SPA + Bootstrap (matches Único's look; reference HTML in `frontend/`)
-  - `lex_gabinete/seed/` - copy of the seed generator / loader
+- This workspace root is the app repo (git remote: github.com/willsiqueira/hackathon). Suggested layout:
+  - `infra/` - AWS CDK v2 app (TypeScript)
+  - `backend/` - Lambda handlers (TypeScript, Node.js 22.x runtime)
+  - `frontend/` - Angular SPA + Bootstrap (matches Único's look; reference HTML in `../frontend/`)
+  - `seed/` - copy of the seed generator / loader
 - Do not commit generated build output, `cdk.out/`, `node_modules/`, `.env*` or any AWS credentials.
 
 ## AWS architecture
@@ -41,5 +41,5 @@ inclusion: always
 
 ## Local environment notes (Windows + pwsh)
 - An antivirus intercepts TLS. Root CAs are exported to `%USERPROFILE%\.certs\windows-roots.pem` and wired through `NODE_EXTRA_CA_CERTS`, `AWS_CA_BUNDLE`, `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `UV_SYSTEM_CERTS`, and npm `cafile`. If a tool fails with a certificate error, point it at that bundle.
-- Python is provided by uv (`uv run`, `uvx`). Seed load: `uv run --no-project --with boto3 python docs/seed/gerar_seed.py --carregar --criar-tabela --tabela Expedientes --regiao us-east-1`.
+- Python is provided by uv (`uv run`, `uvx`). Seed load: `uv run --no-project --with boto3 python ../docs/seed/gerar_seed.py --carregar --criar-tabela --tabela Expedientes --regiao us-east-1`.
 - Docker is not installed: prefer CDK `NodejsFunction` with local esbuild bundling (add `esbuild` as a devDependency).
