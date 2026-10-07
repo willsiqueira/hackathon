@@ -1,372 +1,173 @@
-# Hackathon: painel unificado de expedientes
+# Painel do gabinete: expedientes judiciais num só lugar
 
-Base de dados **sintética** para prototipar um painel unificado/separado dos gerenciadores de expedientes do Único
-(Judicial, Documento e Extrajudicial) e uma nova tela inicial. Arquitetura de referência na AWS:
-API Gateway + Lambda + Cognito + DynamoDB.
+Hackathon MPF & AWS 2026 · caso SUBGTU · **dados 100% sintéticos**
 
-## Origem dos dados
+No Único, os expedientes de um gabinete ficam em três gerenciadores (Judicial, Documento e Extrajudicial), cada um com
+caixas e contadores próprios. Para saber o que vence hoje e o que é urgente, a equipe abre as três telas e monta a
+prioridade de cabeça. Este MVP junta tudo numa lista ordenada por prazo e prioridade, explica por que cada processo
+está no topo, permite agir em lote e abre o dia com uma tela inicial de contadores e alertas.
 
-- **Nenhum dado real.** Etiquetas, números, pessoas, datas e textos são fictícios. Os nomes de servidores são
-  claramente inventados ("Ana Exemplo", "Bruno Teste"…) e os e-mails usam `@exemplo.org`.
-- Os únicos números reais são os **volumes** de expedientes ativos por setor, gerenciador e caixa. Eles vieram de uma
-  consulta agregada (`COUNT`) em homologação, para os setores:
-  - `GABSUB3-DVT` (unidade 787, concentrador 2624122)
-  - `CIVINT/STIC` (unidade 34325, concentrador 17513136)
-- As regras de caixa (a receber, no setor, enviados não recebidos) seguem as consultas reais do Único em
-  `src/main/java/br/mp/mpf/unico/gerenciador/*/model/*-consultas.xml`.
-- Além dos ativos, o gerador cria expedientes `BAIXADO` (histórico recente, cerca de 35% a mais) para alimentar os
-  dashboards.
+Kit do caso (requisitos, dicionário de dados e seed): [`docs/hackathon-expedientes/`](docs/hackathon-expedientes/).
+Spec do Kiro: [`.kiro/specs/painel-expedientes/`](.kiro/specs/painel-expedientes/) (requisitos, design e tarefas).
 
-## Estrutura
+## Arquitetura
 
-```text
-_labs/hackathon-expedientes/
-├── README.md
-├── seed/
-│   ├── gerar_seed.py            # gerador (Python 3, só biblioteca padrão; boto3 apenas para --carregar)
-│   └── saida/
-│       ├── csv/*.csv            # 19 arquivos, um por entidade
-│       └── dynamodb/itens.json  # todos os itens em DynamoDB JSON (single-table)
-└── prototipo/                   # páginas HTML estáticas que demonstram as funcionalidades
-    ├── gerar_dados_js.py        # converte os CSVs em dados/dados.js
-    ├── dados/dados.js           # window.DADOS (gerado, ~12 MB)
-    ├── assets/                  # estilo.css, app.js (núcleo) e um .js por página
-    └── *.html                   # index, painel, expediente, foco, prazos, alertas, indicadores, designacao, lotes
+```mermaid
+flowchart LR
+  U[Navegador<br/>Angular + Bootstrap] -->|HTTPS| CF[CloudFront<br/>CSP, HSTS]
+  CF -->|/*| S3[(S3 privado<br/>OAC, SSE)]
+  CF -->|/api/*| APIGW[API Gateway REST<br/>Cognito User Pool Authorizer]
+  U -->|login| COG[Cognito<br/>grupos MEMBRO, CHEFE, SERVIDOR]
+  APIGW --> API[Lambda Api<br/>Node.js 22, TypeScript]
+  API --> DDB[(DynamoDB Expedientes<br/>tabela única, GSI1, GSI2<br/>KMS, PITR)]
+  API -->|eventos de domínio| EB[EventBridge]
+  EB -->|regra + DLQ| NOT[Lambda Notificador]
+  NOT --> DDB
+  SCH[EventBridge Scheduler<br/>dias úteis, 7h] --> RES[Lambda Resumo diário]
+  RES --> DDB
+  RES --> SES[Amazon SES]
 ```
 
-## Protótipo estático
+- **Serverless de ponta a ponta**, tudo em **AWS CDK v2** ([`infra/`](infra/)): nada criado no console.
+- **Tabela única** exatamente como no `itens.json` do kit: painel pelo GSI1 (`SETOR#…` / `ATIVO#…`), fila pelo GSI2
+  (`PRAZO#<data>#<100-pontos>`), detalhe numa só Query (`EXP#<id>`). Nenhum `Scan` no caminho da requisição.
+- **Orientado a eventos:** designar publica `ExpedienteDesignado`; o notificador gera o alerta fora da requisição, com
+  novas tentativas e fila de mensagens mortas. O resumo diário sai por EventBridge Scheduler + SES.
+- **Camadas:** regras puras em `backend/src/dominio` (testadas), acesso a dados em `backend/src/dados`, handlers finos em
+  `backend/src/api`. O mesmo roteador roda na Lambda e no servidor local.
 
-HTML, CSS e JavaScript puros, sem dependências nem servidor. Abra `prototipo/index.html` direto no navegador
-(`file://`). Se a base for regenerada, rode de novo o conversor:
+## O que o MVP faz
+
+| Requisito | Onde |
+| --- | --- |
+| RF01, RF02 painel unificado ou por gerenciador, caixas com contador (sem baixados, RN7) | Expedientes |
+| RF03 busca e filtros avançados (prazo, prioridade, responsável, assunto, classe, tema, marcador, datas, sinalizações, risco) | Expedientes |
+| RF04, RF05 filtros salvos (padrão, compartilhados), colunas, ordem, densidade, itens por página | Expedientes |
+| RF06, RF07 fila por prazo e prioridade (RN1–RN3), selos com texto, "por que esta prioridade" | Expedientes, detalhe, foco |
+| RF08 risco de vencimento, filtro e ordenação | Expedientes, detalhe |
+| RF09 próximo processo, um por vez, atalhos N, P, A, X | Próximo processo |
+| RF10 prazos em `.ics` com lembrete | Expedientes |
+| RF11, RF12 receber, designar, marcador, ciência, assinar, movimentar e arquivar em lote, com prévia, motivo dos ignorados (RN4, RN5) e desfazer | Expedientes, detalhe, Lotes |
+| RF13 histórico com filtro por tipo e CSV | Detalhe |
+| RF14 sugestão por carga e distribuição equilibrada | Diálogo de designação |
+| RF15, RF16 central de alertas e resumo diário por e-mail (prévia na tela) | Alertas |
+| RF17 indicadores com tabela alternativa; produtividade só para membro e chefe | Indicadores |
+| RF18, RF19 tela inicial com contadores clicáveis, próximos prazos, alertas, informes; widgets configuráveis | Início |
+
+## Rodar localmente
+
+Pré-requisito: Node.js 22 ou superior. O servidor local carrega o `itens.json` do kit numa tabela em memória (mesma
+semântica de chaves do DynamoDB) e usa a data de referência da base, 07/10/2026 17h.
 
 ```bash
-cd _labs/hackathon-expedientes/seed && python3 gerar_seed.py
-cd ../prototipo && python3 gerar_dados_js.py   # use a mesma --data-referencia do gerador, se mudar
+cd backend && npm ci && npm start          # API em http://127.0.0.1:3000/api
+cd frontend && npm ci && npm start         # SPA em http://localhost:4200 (proxy para a API)
 ```
 
-O "hoje" do protótipo é a data de referência da base (07/10/2026 17:00). O seletor "Usuário simulado", no topo,
-troca a pessoa e o setor. Ações, favoritos, filtros salvos, leituras e preferências ficam no `localStorage` (prefixo
-`hx:`). Para zerar, use "Apagar dados locais" na página Lotes.
+Ou publique o build pelo próprio servidor local: `cd frontend && npm run build`, depois `cd backend && npm start` e abra
+<http://127.0.0.1:3000>. No modo local, o login é um seletor de usuário fictício (sem senha) com token HMAC assinado.
 
-| Página | Funcionalidades | Tabelas usadas |
+### Roteiro da demonstração (5 min)
+
+1. Entre como **Bruno Teste (chefe)**. A tela inicial abre nos contadores judiciais: 4 vencidos, 5 vencem hoje, 17 a
+   receber. Clique em "Vencidos": o painel abre filtrado.
+2. No painel, mostre os selos (texto + cor), a ordem da fila e um filtro avançado. Salve o filtro e compartilhe.
+3. Caixa "A receber": marque dois processos, **Receber**, veja a prévia, confirme e **desfaça**.
+4. Caixa "No setor": marque três, **Designar** → "Distribuir de forma equilibrada". A tabela de carga explica a escolha.
+5. Abra um processo: composição da prioridade, risco, prazos, designações e histórico (filtre e exporte CSV).
+6. **Próximo processo**: navegue com N e P.
+7. Saia e entre como **Carla Modelo (servidora)**: filtre "Sigiloso" e veja o conteúdo restrito; tente abrir
+   `/expedientes/EXP003000` (outro setor) e veja o acesso negado.
+
+| Perfil | Usuário fictício | E-mail (Cognito) |
 | --- | --- | --- |
-| `index.html` | Nova tela inicial com widgets configuráveis (visibilidade e ordem): contadores TODOS e por gerenciador, próximo expediente, próximos prazos, alertas não lidos, risco, informes, filtros salvos, estoque | contadores, expedientes, notificacoes, noticias, filtros_salvos, estoque_diario |
-| `painel.html` | Painel unificado; caixas; busca; filtros avançados; filtros salvos (base e novos); priorização rápida; colunas, ordem, agrupamento e densidade personalizáveis; favoritos; ações em lote com pré-visualização e desfazer; exportação CSV | expedientes, filtros_salvos, preferencias_usuario, marcadores |
-| `expediente.html` | Detalhe, composição da prioridade, risco, prazos, designações, marcadores, anotações e histórico filtrável e exportável | movimentacoes, prazos, designacoes, anotacoes, marcadores_expedientes, notificacoes |
-| `foco.html` | Fila "próximo expediente" na ordem do GSI2, com atalhos de teclado (N, P, X, A, D) | expedientes |
-| `prazos.html` | Calendário mensal por situação do prazo e exportação iCal (.ics) com lembrete | expedientes, preferencias_usuario |
-| `alertas.html` | Central de notificações (filtros, marcar como lidas, simulação em tempo real) e prévia do resumo diário por e-mail (SES) | notificacoes, designacoes, expedientes |
-| `indicadores.html` | KPIs, estoque diário, fluxo semanal, pendências, cumprimento de prazos, assuntos e produtividade | estoque_diario, prazos, produtividade_diaria |
-| `designacao.html` | Sugestão de designação por carga ÷ capacidade e distribuição balanceada em lote | designacoes, produtividade_diaria, expedientes |
-| `lotes.html` | Trilha de lotes da sessão (com desfazer) e histórico do setor | acoes_lote |
+| MEMBRO | Ana Exemplo | `usuario01@exemplo.org` |
+| CHEFE | Bruno Teste | `usuario02@exemplo.org` |
+| SERVIDOR | Carla Modelo | `usuario03@exemplo.org` |
 
-Regras ilustrativas do protótipo, que no backend real precisam ser aplicadas no servidor:
-
-- Um usuário não abre expedientes de outro setor.
-- Um SERVIDOR só vê o conteúdo de um sigiloso se for o responsável.
-- O `.ics` não inclui o assunto de expedientes sigilosos.
-- O risco de vencimento é `min(100, 20 × (tempoParadoDias + 1) ÷ (diasRestantes + 1))` e só vale para prazos ainda
-  não vencidos.
-
-Acessibilidade: cada tabela tem `caption`, `th id` e `td headers`; todo campo tem `label`; os diálogos usam `<dialog>`
-nativo, que prende o foco e o devolve ao fechar; avisos saem em `aria-live`; cada gráfico tem uma tabela alternativa;
-há link "pular para o conteúdo"; nenhum `tabindex` é positivo. Isso passou numa verificação automática (Chromium
-headless), mas a validação completa ainda depende de teste manual com leitor de tela.
-
-## Como usar
-
-### Gerar a base
+## Testes
 
 ```bash
-cd _labs/hackathon-expedientes/seed
-python3 gerar_seed.py                                # "hoje" = 07/10/2026 às 17h (dia do evento, padrão)
-python3 gerar_seed.py --data-referencia agora        # "hoje" = momento da execução
-python3 gerar_seed.py --data-referencia 2026-10-08   # outra data, se o evento mudar
+cd backend && npm test        # Vitest: regras RN1–RN7, lote, sigilo, eventos e API sobre a base completa
+cd infra && npm test          # template: nenhum método anônimo, IAM sem "*", KMS, HTTPS, eventos
+cd frontend && npm test       # selos, contraste, filtros, ações por perfil, interceptor
 ```
 
-- O padrão já é o dia do hackathon, **07/10/2026**. Vencidos, "vence hoje", "novos 24h" e os alertas são calculados
-  em relação a essa data. Se a demo mostrar a data do sistema, prefira exibir datas relativas ("vence em 2 dias").
-- Com a mesma semente e a mesma data de referência, a base sai idêntica.
-- Os arquivos em `saida/` são sobrescritos.
+Os testes de API cobrem 401, 403 de outro setor e de claims divergentes, máscara de sigilo em lista, detalhe, CSV,
+histórico e `.ics`, contadores iguais aos de `contadores.csv` e lote de ponta a ponta com desfazer. O roteiro acima foi
+executado em Chromium com axe-core (WCAG 2.1 A/AA) em todas as telas, em 1366 px e em 390 px, sem violações. A
+validação completa de acessibilidade ainda depende de teste manual com leitor de tela.
 
-| Opção | Descrição |
-| --- | --- |
-| `--data-referencia AAAA-MM-DD` ou `agora` | Data usada como "hoje" às 17h (padrão: `2026-10-07`) |
-| `--saida PASTA` | Pasta de saída (padrão: `seed/saida`) |
-| `--carregar` | Grava os itens no DynamoDB (precisa de credenciais AWS) |
-| `--criar-tabela` | Cria a tabela com `GSI1` e `GSI2` antes de carregar |
-| `--tabela NOME` / `--regiao REGIAO` | Padrão: `Expedientes` / `us-east-1` |
+## Publicar na AWS
 
-### Carregar no DynamoDB
-
-**Opção 1: pelo script.** Use com as credenciais do evento exportadas no terminal. Não commite as credenciais.
+Use sempre o perfil `hackathon` (conta do evento, `us-east-1`). Nunca o perfil `default`.
 
 ```bash
-export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_SESSION_TOKEN=...
-uv run --no-project --with boto3 python gerar_seed.py \
-  --carregar --criar-tabela --tabela Expedientes --regiao us-east-1
+# Na raiz do repositório
+(cd backend && npm ci)
+(cd frontend && npm ci && npm run build)                  # o CDK publica o build no S3
+(cd infra && npm ci && npm run synth && npm run deploy)   # synth antes de todo deploy
+
+# Carga do seed na tabela criada pela pilha (sem --criar-tabela)
+AWS_PROFILE=hackathon uv run --no-project --with boto3 python docs/hackathon-expedientes/seed/gerar_seed.py \
+  --carregar --tabela Expedientes --regiao us-east-1
+
+# Usuários fictícios no Cognito (a senha fica só no terminal)
+(cd infra && USER_POOL_ID=<saída UserPoolId> SENHA_DEMO='<12+ caracteres>' npm run usuarios)
 ```
 
-Sem `uv`: `pip install boto3` e depois `python3 gerar_seed.py ... --carregar`.
+A saída `Url` da pilha é o endereço da aplicação. Para o resumo diário, passe `-c remetente=<e-mail verificado no SES>`
+e, com o SES em sandbox, `-c destinatarioDemo=<e-mail verificado>`. Para limpar: `npm run destroy` (todos os recursos
+usam `RemovalPolicy.DESTROY`).
 
-**Opção 2: Import from S3 (console).**
+## Segurança e LGPD
 
-1. Envie `saida/dynamodb/itens.json` para um bucket S3.
-2. No DynamoDB, escolha *Import from S3*, formato **DynamoDB JSON**, sem compressão.
-3. Chaves da tabela: `PK` (String) e `SK` (String).
-4. Crie os índices globais `GSI1` (`GSI1PK`, `GSI1SK`) e `GSI2` (`GSI2PK`, `GSI2SK`), todos String, com projeção ALL.
+- **Nenhum endpoint anônimo.** O API Gateway valida o ID token do Cognito; a Lambda lê `custom:idUsuario`,
+  `custom:siglaSetor` (imutáveis, não graváveis pelo cliente) e o grupo, e confere com o cadastro.
+- **Autorização no backend:** toda consulta usa `SETOR#<sigla>` do usuário; outro setor → 403. Em sigiloso, servidor só
+  vê conteúdo se for o responsável (RN6). A máscara é aplicada antes dos filtros, para o filtro não revelar o
+  conteúdo. CSV, histórico, `.ics` e e-mail **nunca** levam conteúdo de sigiloso, qualquer que seja o perfil.
+- **Entradas validadas com zod**, limites de lote (200) e de página (100), corpo até 100 KB, Query parametrizada.
+  CSV protegido contra injeção de fórmula.
+- **Menor privilégio:** uma role por Lambda, só as ações usadas; teste automatizado garante ausência de `*`.
+- **Criptografia:** DynamoDB com KMS e PITR; S3 privado (OAC, SSE, só HTTPS); CloudFront com CSP, HSTS e
+  `X-Frame-Options`.
+- **Logs** estruturados sem corpo de requisição nem conteúdo de expediente; log de acesso da API sem query string.
+- **LGPD:** só dados sintéticos do kit; eventos e e-mails levam o mínimo (etiquetas e números); sessão em
+  `sessionStorage`; nenhuma credencial no repositório.
 
-O DynamoDB JSON preserva números e booleanos e omite atributos vazios. Por isso é preferível ao CSV para o DynamoDB.
+## Custo estimado
 
-### Usar os CSVs em outro lugar
+Estimativa de ordem de grandeza para um gabinete (cerca de 10 usuários e 2 mil leituras de painel por dia), em
+us-east-1, com preços sob demanda. Confirme no AWS Pricing Calculator antes de qualquer decisão.
 
-- **Formato:** UTF-8, separador vírgula, cabeçalho na primeira linha.
-- **Datas e horas:** ISO 8601 com fuso de Brasília (`2026-09-18T11:00:14-03:00`). Datas sem hora vêm como
-  `2026-10-24`.
-- **Booleanos e listas:** booleanos como `true`/`false`. Listas vêm separadas por `;` (ex.: `marcadores`,
-  `idsExpedientes`, `colunasVisiveis`).
-- **Excel:** use *Dados → De Texto/CSV* para os acentos saírem corretos.
-- **Banco relacional (RDS, Aurora, Athena), pandas etc.:** as tabelas se relacionam por `idExpediente`, `idUsuario`,
-  `siglaSetor` e `idRotulo`.
-
-## Domínios principais
-
-| Campo | Valores |
-| --- | --- |
-| `gerenciador` | `JUDICIAL`, `DOCUMENTO`, `EXTRAJUDICIAL` (equivale ao "Procedimento" do Único) |
-| `caixa` | `A_RECEBER`, `NO_SETOR`, `ENVIADO_NAO_RECEBIDO`, `BAIXADO` (histórico; filtre `caixa != BAIXADO` no painel) |
-| `statusPrazo` | `VENCIDO`, `VENCE_HOJE`, `CRITICO` (1–3 dias), `ATENCAO` (4–7 dias), `NO_PRAZO`, `CUMPRIDO`, `CUMPRIDO_COM_ATRASO` |
-| `prioridade` | `CRITICA` (≥60 pontos), `ALTA` (≥35), `MEDIA` (≥20), `BAIXA` |
-| `tipoPrazo` | `PROCESSUAL` (judicial), `RESPOSTA` (documento), `TRAMITACAO` (extrajudicial, conforme a classe CNMP) |
-| `tipoResponsabilidade` | `TITULAR` (titular do ofício ou setor) ou `DESIGNADO` (designação ativa) |
-| `perfil` (usuário) | `MEMBRO`, `CHEFE`, `SERVIDOR` |
-
-A `pontuacaoPrioridade` (0–100) soma estas parcelas:
-
-- Prazo: vencido 50, vence hoje 45, crítico 35, atenção 20, no prazo 5.
-- Urgência legal (réu preso, idoso, liminar…): +30.
-- Nova intimação: +10.
-- Parado há mais de 30 dias: +10.
-- Aguardando assinatura: +5.
-
-Se o expediente estiver em "enviado não recebido", o total é dividido por 2. A lista completa de códigos, descrições e
-cores está em `catalogos.csv`.
-
-## Arquivos CSV
-
-As quantidades são aproximadas (referência 07/10/2026). Elas variam um pouco com `--data-referencia`, exceto os volumes
-ativos por caixa, que são fixos.
-
-| Arquivo | Linhas | Funcionalidade |
+| Serviço | Uso mensal aproximado | Custo aproximado |
 | --- | --- | --- |
-| `expedientes.csv` | ~4.100 | Painel unificado, filtros, priorização, prazos |
-| `movimentacoes.csv` | ~23.500 | Histórico e rastreabilidade |
-| `prazos.csv` | ~4.300 | Acompanhamento de prazos |
-| `designacoes.csv` | ~2.000 | Designados para mim, carga por servidor |
-| `anotacoes.csv` | ~3.900 | Detalhe do expediente |
-| `marcadores.csv` | 22 | Marcadores do setor |
-| `marcadores_expedientes.csv` | ~1.200 | Filtro por marcador |
-| `favoritos.csv` | 30 | Favoritos |
-| `notificacoes.csv` | ~7.900 | Alertas e notificações |
-| `acoes_lote.csv` | ~50 | Ações em lote |
-| `preferencias_usuario.csv` | 48 | Personalização |
-| `filtros_salvos.csv` | ~35 | Personalização, pesquisa avançada |
-| `contadores.csv` | 7 | Tela inicial, badges |
-| `estoque_diario.csv` | 450 | Dashboards (volume e tendência) |
-| `produtividade_diaria.csv` | ~1.400 | Dashboards (produtividade) |
-| `usuarios.csv` | 14 | Login (Cognito), "meus" |
-| `setores.csv` | 2 | Contexto do setor |
-| `noticias.csv` | 4 | Informes da tela inicial |
-| `catalogos.csv` | 126 | Selects, legendas e cores |
+| DynamoDB sob demanda | ~40 MB, ~40 milhões de unidades de leitura | US$ 5 a 10 |
+| Lambda | ~100 mil invocações de 300 ms, 1 GB | < US$ 2 |
+| API Gateway REST | ~100 mil requisições | < US$ 1 |
+| CloudFront + S3 | poucos GB | < US$ 1 |
+| Cognito, EventBridge, SES | dentro das faixas iniciais | ~US$ 0 |
 
-### `expedientes.csv`
+O custo dominante é a leitura do painel (o setor inteiro por consulta). O próximo passo de otimização é projetar no
+GSI1 só as colunas da lista ou guardar os ativos do setor em cache.
 
-Uma linha por expediente, com **o mesmo esquema para os três gerenciadores**.
+## Do MVP à produção
 
-| Grupo | Colunas |
-| --- | --- |
-| Identificação | `idExpediente`, `gerenciador`, `siglaSetor`, `etiqueta`, `numeroReferencia` (ex.: `HC 1.481.458/DF`), `classe`, `descricaoClasse`, `assunto`, `tema` (área/câmara), `resumo`, `orgaoOrigem`, `tipoEntrada` |
-| Localização e fluxo | `caixa`, `situacao` (ex.: `EM_ANALISE`, `MINUTA_EM_ELABORACAO`, `AGUARDANDO_ASSINATURA`), `acaoPendente` (texto para o usuário), `requerAcao` (true em A_RECEBER e NO_SETOR), `setorOrigem`, `setorDestino` |
-| Datas | `dataAutuacao` ≤ `dataChegada` ≤ `dataRecebimento` ≤ `dataUltimaMovimentacao`; `diasNoSetor`, `tempoParadoDias` |
-| Prazo | `tipoPrazo`, `dataInicioPrazo`, `dataPrazo`, `duracaoPrazoDias`, `diasRestantes` (negativo = vencido; nos baixados é a folga na saída), `statusPrazo` |
-| Prioridade | `prioridade`, `pontuacaoPrioridade`, `urgente`, `motivoUrgencia` (`Nenhum` quando não há), `reuPreso`, `idoso`, `novaIntimacao`, `novo` (chegou há menos de 24h) |
-| Responsável | `idResponsavel`, `nomeResponsavel`, `tipoResponsabilidade`, `oficioResponsavel`, `designado` |
-| Outros | `eletronico`, `nivelSigilo` (0 = público), `sigiloso`, `favorito`, `marcadores` (`;`), `qtdMarcadores`, `qtdAnotacoes`, `qtdMinutasPendentes`, `qtdMovimentacoes` |
+- Integração com o Único (eventos de entrada e saída de expedientes) no lugar da carga do seed.
+- Autenticação federada com o provedor do MPF (SAML/OIDC no Cognito) e políticas no Amazon Verified Permissions.
+- Auditoria (trilha de quem viu o quê em sigilosos), CloudWatch dashboards e alarmes, WAF no CloudFront.
+- Paginação por chave e projeções no GSI para setores com dezenas de milhares de expedientes.
+- Bedrock para resumo do dia em linguagem natural e busca em linguagem natural convertida em filtros, sem enviar
+  conteúdo sigiloso.
+- Teste com leitor de tela e com usuários dos três perfis.
 
-Só há dois vazios, ambos intencionais:
+**Reuso:** o modelo e o código não dependem do gabinete; qualquer setor do Único (ou outro órgão com caixas e prazos)
+usa o mesmo painel trocando a carga de dados.
 
-- `dataRecebimento`, apenas em `A_RECEBER`, porque o expediente ainda não foi recebido.
-- `marcadores`, quando o expediente não tem marcador.
+## Uso do Kiro
 
-### `movimentacoes.csv`
-
-Linha do tempo de cada expediente, em ordem cronológica. Colunas: `idMovimentacao`, `idExpediente`, `etiqueta`,
-`gerenciador`, `siglaSetor`, `dataHora`, `tipoMovimentacao`, `idUsuario` (`EXTERNO` para ações fora do setor),
-`nomeUsuario`, `setorOrigem`, `setorDestino`, `descricao`.
-
-Valores de `tipoMovimentacao`:
-
-- Entrada no setor: `CADASTRO`, `ENVIO_AO_SETOR`, `RECEBIMENTO`
-- Trabalho no setor: `DESIGNACAO`, `MARCADOR_INCLUIDO`, `ANOTACAO_INCLUIDA`, `MINUTA_CRIADA`, `ASSINATURA`,
-  `PRAZO_PRORROGADO`
-- Saída: `ENVIO_PELO_SETOR`, `ARQUIVAMENTO`
-
-A última movimentação de cada expediente coincide com `expedientes.dataUltimaMovimentacao`.
-
-### `prazos.csv`
-
-Prazo atual de cada expediente e os prazos anteriores que foram prorrogados. Colunas: `idPrazo`, `idExpediente`,
-`etiqueta`, `gerenciador`, `siglaSetor`, `tipoPrazo`, `dataInicio`, `dataPrazo`, `duracaoDias`, `situacao`,
-`dataEncerramento`, `diasAtraso`.
-
-- `situacao`: `ABERTO`, `PRORROGADO`, `CUMPRIDO_NO_PRAZO` ou `CUMPRIDO_COM_ATRASO`.
-- `dataEncerramento` fica vazio quando o prazo está `ABERTO`.
-- `diasAtraso` só é maior que zero em prazo vencido (aberto) ou cumprido com atraso.
-
-### `designacoes.csv`
-
-Colunas: `idDesignacao`, `idExpediente`, `etiqueta`, `gerenciador`, `siglaSetor`, `idUsuarioDesignado`, `nomeDesignado`,
-`idUsuarioDesignador`, `nomeDesignador`, `dataDesignacao`, `prazoDevolucao`, `diasParaDevolucao`, `situacao`,
-`statusDevolucao`, `dataFim`.
-
-- `situacao`: `ATIVA` ou `ENCERRADA`.
-- `statusDevolucao`: `NO_PRAZO` e `VENCIDA` para as ativas; `DEVOLVIDA_NO_PRAZO` e `DEVOLVIDA_COM_ATRASO` para as
-  encerradas.
-- `dataFim` fica vazio quando a designação está `ATIVA`.
-
-### `anotacoes.csv`
-
-Anotações livres (textos fictícios). Colunas: `idAnotacao`, `idExpediente`, `etiqueta`, `gerenciador`, `siglaSetor`,
-`idUsuario`, `nomeUsuario`, `dataHora`, `texto`.
-
-### `marcadores.csv` e `marcadores_expedientes.csv`
-
-- **`marcadores.csv`** traz os marcadores de cada setor por gerenciador. Colunas: `idRotulo`, `siglaSetor`,
-  `gerenciador`, `descricao`, `cor` (hexadecimal), `finalizarNaSaida`, `qtdExpedientes`.
-- **`marcadores_expedientes.csv`** faz o vínculo entre marcador e expediente (N:N). Colunas: `idRotulo`, `descricao`,
-  `cor`, `idExpediente`, `etiqueta`, `gerenciador`, `siglaSetor`, `idUsuario`, `dataInclusao`.
-
-### `favoritos.csv`
-
-Favoritos do setor. Colunas: `siglaSetor`, `idExpediente`, `etiqueta`, `gerenciador`, `idUsuario`, `nomeUsuario`,
-`dataInclusao`.
-
-### `notificacoes.csv`
-
-Alertas por usuário, em ordem cronológica. Colunas: `idNotificacao`, `idUsuario`, `siglaSetor`, `idExpediente`,
-`etiqueta`, `gerenciador`, `tipoNotificacao`, `severidade` (`CRITICO`, `ATENCAO`, `INFO`), `titulo`, `mensagem`,
-`dataHora`, `lida`, `link`.
-
-| `tipoNotificacao` | Quando é gerada |
-| --- | --- |
-| `NOVO_EXPEDIENTE` | Expediente chegou ao setor (a receber) |
-| `NOVA_INTIMACAO` | Judicial com intimação nova |
-| `PRAZO_VENCIDO` / `PRAZO_VENCE_HOJE` / `PRAZO_PROXIMO` | Situação do prazo (próximo = 3 ou 7 dias antes) |
-| `DESIGNACAO` / `DEVOLUCAO_VENCIDA` | Expediente designado ao usuário, ou prazo de devolução vencido |
-| `ALTERACAO` | Outro usuário incluiu marcador ou anotação, ou prorrogou prazo (últimos 30 dias) |
-| `ENVIO_PENDENTE` | Enviado há 5 dias ou mais e ainda não recebido pelo destino |
-
-### `acoes_lote.csv`
-
-Log de operações em lote. Colunas: `idLote`, `siglaSetor`, `idUsuario`, `nomeUsuario`, `tipoAcao`, `parametros`,
-`dataHora`, `qtdExpedientes`, `qtdSucesso`, `qtdFalhas`, `resultado`, `gerenciadores` (`;`), `idsExpedientes` (`;`).
-
-- `tipoAcao`: `RECEBER`, `DESIGNAR`, `INCLUIR_MARCADOR`, `MOVIMENTAR`, `DAR_CIENCIA`, `ASSINAR` ou `ARQUIVAR`.
-- `resultado`: `SUCESSO` ou `PARCIAL`.
-
-### `preferencias_usuario.csv`
-
-Uma linha por usuário e contexto. `contexto` pode ser `PAINEL_UNIFICADO` ou o nome de um gerenciador do setor.
-
-Colunas: `idUsuario`, `siglaSetor`, `contexto`, `colunasVisiveis` (nomes de colunas de `expedientes`, separados por `;`),
-`ordenacaoCampo`, `ordenacaoDirecao`, `itensPorPagina`, `caixaInicial`, `agruparPor`, `densidade`, `tema`,
-`notificarPorEmail`, `antecedenciaAlertaPrazoDias`.
-
-### `filtros_salvos.csv`
-
-Colunas: `idFiltro`, `idUsuario`, `siglaSetor`, `nome`, `criterios`, `ordenacao` (`campo:asc|desc`), `padrao`,
-`compartilhadoComSetor`, `dataCriacao`.
-
-`criterios` é um JSON cujas chaves são colunas de `expedientes`. Um valor em lista significa "um destes". O sufixo `Min`
-indica "maior ou igual a". Exemplo:
-
-```json
-{"statusPrazo": ["VENCIDO", "VENCE_HOJE", "CRITICO"]}
-{"gerenciador": ["JUDICIAL"], "urgente": true}
-{"tempoParadoDiasMin": 30}
-```
-
-### `contadores.csv`
-
-Totais atuais por setor e gerenciador, mais uma linha `gerenciador = TODOS` para o painel unificado e a tela inicial.
-
-Colunas: `siglaSetor`, `gerenciador`, `aReceber`, `noSetor`, `enviadosNaoRecebidos`, `designados`, `favoritos`,
-`vencidos`, `venceHoje`, `criticos`, `atencao`, `urgentes`, `prioridadeCritica`, `novos24h`, `parados30dias`,
-`minutasPendentes`, `baixados30dias`.
-
-Os indicadores de prazo e urgência consideram só os expedientes que exigem ação (A_RECEBER e NO_SETOR).
-
-### `estoque_diario.csv`
-
-Série dos últimos 90 dias por setor e gerenciador. Colunas: `data`, `siglaSetor`, `gerenciador`, `entradas`,
-`recebimentos`, `saidas`, `aReceber`, `noSetor`, `vencidos`.
-
-A série é calculada a partir das datas dos expedientes. O último dia coincide com `contadores.csv`.
-
-### `produtividade_diaria.csv`
-
-Ações por servidor e dia, agregadas de `movimentacoes.csv` (só aparecem dias com alguma ação).
-
-Colunas: `data`, `siglaSetor`, `gerenciador`, `idUsuario`, `nomeUsuario`, `recebimentos`, `designacoes`, `marcadores`,
-`anotacoes`, `minutas`, `assinaturas`, `prorrogacoes`, `envios`, `arquivamentos`, `prazosCumpridosNoPrazo`,
-`prazosCumpridosComAtraso`, `totalAcoes`.
-
-### `usuarios.csv` e `setores.csv`
-
-- **`usuarios.csv`** traz servidores fictícios que podem ser cadastrados no Cognito. Guarde `idUsuario` e `siglaSetor`
-  como atributos customizados. Colunas: `idUsuario`, `nome`, `siglaSetor`, `perfil`, `cargo`, `email`, `ativo`,
-  `dataUltimoAcesso`.
-- **`setores.csv`** tem as colunas `siglaSetor`, `idUnidadeOrganica`, `idConcentrador`, `nome`, `tipoSetor`, `oficio`,
-  `gerenciadores` (`;`) e `qtdUsuarios`.
-
-### `noticias.csv`
-
-Informes da tela inicial. Colunas: `idNoticia`, `titulo`, `categoria`, `conteudo`, `prioridade` (1 = maior), `destaque`,
-`dataInicioExibicao`, `dataFimExibicao`.
-
-### `catalogos.csv`
-
-Tabela de domínios para selects, legendas e badges. Colunas: `dominio`, `codigo`, `descricao`, `ordem`, `cor`.
-
-Domínios disponíveis:
-
-- Gerais: `GERENCIADOR`, `CAIXA`, `SITUACAO`, `STATUS_PRAZO`, `PRIORIDADE`, `SEVERIDADE`, `TIPO_PRAZO`
-- Eventos e ações: `TIPO_MOVIMENTACAO`, `TIPO_NOTIFICACAO`, `TIPO_ACAO_LOTE`
-- Por gerenciador: `CLASSE_<GERENCIADOR>`, `ASSUNTO_<GERENCIADOR>`, `TEMA_<GERENCIADOR>`
-
-## Modelo DynamoDB (`dynamodb/itens.json`)
-
-É uma tabela única com os índices `GSI1` e `GSI2`. Cada item tem o atributo `entidade`, com o nome do CSV de origem, e
-os mesmos campos do CSV correspondente.
-
-| Padrão de acesso | Chave |
-| --- | --- |
-| Painel unificado do setor | `GSI1PK = SETOR#<sigla>` e `begins_with(GSI1SK, "ATIVO#")` |
-| Aba de um gerenciador/caixa | `GSI1PK = SETOR#<sigla>` e `begins_with(GSI1SK, "ATIVO#JUD#A_RECEBER#")` (`JUD`, `DOC`, `EXT`) |
-| Histórico de baixados | `GSI1PK = SETOR#<sigla>` e `begins_with(GSI1SK, "HIST#")` |
-| Fila por prazo e prioridade | `GSI2PK = SETOR#<sigla>`: ordenado por data do prazo e, em seguida, pela prioridade maior |
-| Detalhe completo do expediente | `PK = EXP#<id>`, que retorna `META`, `MOV#`, `PRZ#`, `DES#`, `ANO#` e `ROT#` |
-| Designados para mim | `GSI1PK = USR#<id>` e `begins_with(GSI1SK, "DES#ATIVA#")` |
-| Histórico de ações do usuário | `GSI1PK = USR#<id>` e `begins_with(GSI1SK, "MOV#")` |
-| Notificações, preferências, filtros, lotes | `PK = USR#<id>` com SK `NOT#`, `PREF#`, `FILTRO#`, `LOTE#` |
-| Contadores, estoque, produtividade, marcadores, favoritos | `PK = SETOR#<sigla>` com SK `CONT#`, `EST#`, `PROD#`, `ROT#`, `FAV#` |
-| Expedientes de um marcador | `GSI1PK = ROT#<idRotulo>` |
-| Informes e catálogos | `PK = NOTICIA`; `PK = CATALOGO#<dominio>` |
-
-## Cuidados
-
-- Só use esta base sintética fora da rede do MPF. **Não exporte dados reais de homologação ou de produção** para contas
-  AWS de evento (LGPD e sigilo).
-- A pasta `_labs/` não está no `.gitignore` do Único. Não a inclua em commits de branches do sistema.
-- Não coloque credenciais AWS em arquivos desta pasta.
-# aws-mpf-hackathon-2026
+- **Spec:** requisitos (EARS), design e tarefas em [`.kiro/specs/painel-expedientes/`](.kiro/specs/painel-expedientes/).
+- **Steering:** produto, tecnologia e critérios de avaliação em [`.kiro/steering/`](.kiro/steering/).
+- **Hooks:** [`.kiro/hooks/`](.kiro/hooks/) roda typecheck e testes do backend ao salvar e pede revisão das regras de
+  sigilo e acesso quando código sensível muda.
