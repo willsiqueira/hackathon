@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Critérios de Avaliação — Hackathon AWS × MPF</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f8f9fb;
+      color: #1e1e2f;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 0;
+    }
+
+    .header {
+      background: #1e1e2f;
+      color: #fff;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+    .header p {
+      font-size: 15px;
+      color: #a5b4fc;
+      font-weight: 500;
+    }
+    .header .subtitle {
+      font-size: 13px;
+      color: #818cf8;
+      margin-top: 4px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    .intro {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+    .intro h2 {
+      font-size: 16px;
+      color: #3730a3;
+      margin-bottom: 8px;
+    }
+    .intro p {
+      font-size: 14px;
+      color: #525266;
+      line-height: 1.65;
+    }
+    .intro strong { color: #1e1e2f; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .summary-item {
+      background: #fff;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .summary-item .num {
+      font-size: 22px;
+      font-weight: 700;
+      color: #4f46e5;
+    }
+    .summary-item .lbl {
+      font-size: 11px;
+      color: #525266;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-weight: 600;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e8e8f0;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      break-inside: avoid;
+    }
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 18px 22px;
+      border-bottom: 1px solid #f0f0f6;
+    }
+    .card-num {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #4f46e5;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .card-title-group { flex: 1; }
+    .card-title-group h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e1e2f;
+      margin-bottom: 2px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: #525266;
+      line-height: 1.5;
+    }
+    .card-score {
+      background: #eef2ff;
+      color: #4f46e5;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .card-body {
+      padding: 16px 22px 20px;
+    }
+    .items-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #525266;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 8px;
+    }
+    .card-body ul {
+      list-style: none;
+      padding: 0;
+    }
+    .card-body li {
+      font-size: 14px;
+      color: #1e1e2f;
+      line-height: 1.65;
+      padding: 4px 0 4px 20px;
+      position: relative;
+    }
+    .card-body li::before {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 12px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4f46e5;
+      opacity: 0.4;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 13px;
+      color: #525266;
+      border-top: 1px solid #e8e8f0;
+      margin-top: 16px;
+    }
+    .footer strong { color: #4f46e5; }
+
+    .scale-section {
+      background: #fff;
+      border: 1px solid #e8e8f0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+    .scale-section h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #1e1e2f;
+    }
+    .scale-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .scale-table th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #f8f9fb;
+      border-bottom: 2px solid #e8e8f0;
+      font-weight: 600;
+      color: #525266;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .scale-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f0f0f6;
+      color: #1e1e2f;
+    }
+    .scale-table .range {
+      font-weight: 700;
+      color: #4f46e5;
+      white-space: nowrap;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .header { padding: 20px; }
+      .container { padding: 16px; }
+      .card { box-shadow: none; border: 1px solid #ccc; }
+    }
+
+    @media (max-width: 600px) {
+      .card-header { flex-wrap: wrap; }
+      .card-score { margin-top: 8px; }
+      .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Hackathon AWS × MPF</h1>
+    <p>Critérios de Avaliação de Projetos</p>
+    <p class="subtitle">Outubro/2026 · Pitch de 5 minutos por equipe · Nota de 0 a 10 por critério</p>
+  </div>
+
+  <div class="container">
+    <div class="intro">
+      <h2>Como funciona a avaliação?</h2>
+      <p>
+        Cada equipe será avaliada pela banca em <strong>6 critérios</strong>, com notas de <strong>0 a 10</strong> em cada um.
+        A <strong>nota final</strong> de cada equipe é a média aritmética das notas atribuídas por todos os membros da banca.
+        As equipes terão <strong>5 minutos</strong> para apresentar o MVP + <strong>1 minuto</strong> de perguntas (Q&A).
+      </p>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="num">6</div><div class="lbl">Critérios</div></div>
+        <div class="summary-item"><div class="num">0–10</div><div class="lbl">Escala</div></div>
+        <div class="summary-item"><div class="num">60</div><div class="lbl">Pontos máx.</div></div>
+        <div class="summary-item"><div class="num">5 min</div><div class="lbl">Pitch</div></div>
+        <div class="summary-item"><div class="num">1 min</div><div class="lbl">Q&A</div></div>
+      </div>
+    </div>
+
+    <div class="scale-section">
+      <h2>Escala de referência</h2>
+      <table class="scale-table">
+        <thead>
+          <tr><th>Nota</th><th>Nível</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="range">9–10</td><td>Excelente</td><td>Supera expectativas; implementação exemplar e completa.</td></tr>
+          <tr><td class="range">7–8</td><td>Bom</td><td>Atende bem; demonstra domínio sólido com pequenas lacunas.</td></tr>
+          <tr><td class="range">5–6</td><td>Satisfatório</td><td>Atende o mínimo; funcional mas com oportunidades claras de melhoria.</td></tr>
+          <tr><td class="range">3–4</td><td>Parcial</td><td>Aborda parcialmente; gaps significativos na implementação.</td></tr>
+          <tr><td class="range">0–2</td><td>Insuficiente</td><td>Não atende ou não foi demonstrado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-num">1</div>
+            <div class="card-title-group">
+              <h2>Atendimento aos Requisitos</h2>
+              <p class="card-desc">Quanto o MVP atende aos requisitos funcionais e não-funcionais do caso de uso escolhido.</p>
+            </div>
+            <div class="card-score">0–10</div>
+          </div>
+          <div class="card-body">
+            <p class="items-label">Itens avaliados:</p>
+            <ul>
+            <li>Cobertura das funcionalidades descritas no caso de uso</li>
+            <li>Fluxo principal implementado de ponta a ponta (demo funcional)</li>
+            <li>Tratamento de entradas e saídas conforme especificado (PDF, CSV, JSON, etc.)</li>
+            <li>Qualidade e utilidade do output gerado (relatório, dashboard, documento, API)</li>
+            <li>Uso adequado dos dados sintéticos do kit de preparação</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-num">2</div>
+            <div class="card-title-group">
+              <h2>Arquitetura AWS</h2>
+              <p class="card-desc">Adoção de padrões modernos de arquitetura na AWS e uso adequado dos serviços gerenciados.</p>
+            </div>
+            <div class="card-score">0–10</div>
+          </div>
+          <div class="card-body">
+            <p class="items-label">Itens avaliados:</p>
+            <ul>
+            <li>Arquitetura serverless (Lambda, API Gateway, S3, DynamoDB, Step Functions)</li>
+            <li>Arquitetura orientada a eventos (EventBridge, SNS/SQS, triggers)</li>
+            <li>Uso correto de serviços gerenciados em vez de soluções manuais</li>
+            <li>Infraestrutura como código (SAM, CDK ou CloudFormation)</li>
+            <li>Desacoplamento de componentes e separação de responsabilidades</li>
+            <li>Uso apropriado do Bedrock para cenários de IA generativa</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-num">3</div>
+            <div class="card-title-group">
+              <h2>Inovação e Criatividade</h2>
+              <p class="card-desc">Originalidade da solução, abordagem criativa para o problema e uso inteligente de tecnologias.</p>
+            </div>
+            <div class="card-score">0–10</div>
+          </div>
+          <div class="card-body">
+            <p class="items-label">Itens avaliados:</p>
+            <ul>
+            <li>Abordagem diferenciada para resolver o problema proposto</li>
+            <li>Combinação criativa de serviços AWS e funcionalidades do Kiro</li>
+            <li>Uso de specs, hooks e steering do Kiro como parte da solução</li>
+            <li>UX/UI bem pensada para o usuário final (atendente, dev, gestor)</li>
+            <li>Features extras que agregam valor além do escopo mínimo</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-num">4</div>
+            <div class="card-title-group">
+              <h2>Segurança</h2>
+              <p class="card-desc">Práticas de segurança aplicadas na arquitetura, no código e no tratamento de dados.</p>
+            </div>
+            <div class="card-score">0–10</div>
+          </div>
+          <div class="card-body">
+            <p class="items-label">Itens avaliados:</p>
+            <ul>
+            <li>Autenticação e autorização (Cognito, Verified Permissions, IAM policies)</li>
+            <li>Princípio do menor privilégio nas roles e policies IAM</li>
+            <li>Validação e sanitização de inputs (proteção contra injeção)</li>
+            <li>Tratamento seguro de dados sensíveis (sem expor em logs/API)</li>
+            <li>Uso de HTTPS, criptografia em trânsito e em repouso (KMS/S3 SSE)</li>
+            <li>Considerações de LGPD no tratamento de dados pessoais</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-num">5</div>
+            <div class="card-title-group">
+              <h2>Apresentação do MVP</h2>
+              <p class="card-desc">Qualidade do pitch de 5 minutos: estrutura, clareza, demonstração e comunicação.</p>
+            </div>
+            <div class="card-score">0–10</div>
+          </div>
+          <div class="card-body">
+            <p class="items-label">Itens avaliados:</p>
+            <ul>
+            <li>Estrutura do pitch (problema → solução → demo → resultados → próximos passos)</li>
+            <li>Demo ao vivo funcional e convincente</li>
+            <li>Clareza na explicação da arquitetura e decisões técnicas</li>
+            <li>Gestão do tempo (dentro dos 5 minutos)</li>
+            <li>Respostas objetivas na sessão de Q&A (1 min)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-num">6</div>
+            <div class="card-title-group">
+              <h2>Viabilidade e Escalabilidade</h2>
+              <p class="card-desc">Potencial real de levar o MVP para produção, escalar e gerar valor contínuo para o MPF.</p>
+            </div>
+            <div class="card-score">0–10</div>
+          </div>
+          <div class="card-body">
+            <p class="items-label">Itens avaliados:</p>
+            <ul>
+            <li>Caminho claro de MVP para produção (o que falta implementar)</li>
+            <li>Arquitetura que escala sem re-arquitetura (serverless, managed services)</li>
+            <li>Estimativa realista de custo operacional na AWS</li>
+            <li>Potencial de reuso por outras equipes ou órgãos</li>
+            <li>Manutenibilidade do código (documentação, testes, modularidade)</li>
+            </ul>
+          </div>
+        </div>
+
+    <div class="footer">
+      <strong>Hackathon AWS × MPF</strong> · Outubro/2026<br>
+      Boa sorte a todas as equipes!
+    </div>
+  </div>
+</body>
+</html>
